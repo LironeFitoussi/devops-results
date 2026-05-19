@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import type { IUserDoc, IUserModel } from "../types/index";
+import type { IUserDoc, IUserModel } from "../types/index.js";
 
 const userSchema = new Schema<IUserDoc>({
     firstName: { type: String, required: true },

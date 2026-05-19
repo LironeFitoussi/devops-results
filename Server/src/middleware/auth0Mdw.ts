@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { checkJwt } from "../utils/auth0";
+import { checkJwt } from "../utils/auth0.js";
 
 // Re-export the checkJwt middleware for consistency
 // export { checkJwt as auth0Middleware };

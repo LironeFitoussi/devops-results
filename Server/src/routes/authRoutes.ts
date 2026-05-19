@@ -1,8 +1,8 @@
-import { asyncHandler } from "@/utils/errorHandler";
+import { asyncHandler } from "../utils/errorHandler.js";
 import { Router } from "express";
-import AuthController from "../controllers/authControllers";
+import AuthController from "../controllers/authControllers.js";
 // import { checkJwt } from "../utils/auth0";
-import { auth0Middleware } from "../middleware/auth0Mdw";
+import { auth0Middleware } from "../middleware/auth0Mdw.js";
 const router = Router();
 const authController = new AuthController();
 

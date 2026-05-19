@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import User from "../models/userModel";
+import User from "../models/userModel.js";
 import { createUserSchema, updateUserSchema } from "../zod/usersZod.js";
 import { AppError } from "../utils/errorHandler.js";
 import { linkUserToStudentByEmail, normalizeEmail } from "../services/studentLinkingService.js";

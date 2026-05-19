@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import User from "../models/userModel";
-import { AppError } from "@/utils/errorHandler";
+import User from "../models/userModel.js";
+import { AppError } from "../utils/errorHandler.js";
 import { linkUserToStudentByEmail } from "../services/studentLinkingService.js";
 
 class AuthController {

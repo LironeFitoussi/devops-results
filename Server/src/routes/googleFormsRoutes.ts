@@ -1,7 +1,7 @@
-import { asyncHandler } from "@/utils/errorHandler";
+import { asyncHandler } from "../utils/errorHandler.js";
 import { Router } from "express";
-import GoogleFormsController from "../controllers/googleFormsController";
-import { adminOnly } from "../middleware/adminOnly";
+import GoogleFormsController from "../controllers/googleFormsController.js";
+import { adminOnly } from "../middleware/adminOnly.js";
 
 const router = Router();
 const ctrl = new GoogleFormsController();

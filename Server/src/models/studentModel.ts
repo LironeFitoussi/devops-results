@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import type { IStudentDoc, IStudentModel } from "../types/index";
+import type { IStudentDoc, IStudentModel } from "../types/index.js";
 import { normalizeEmail } from "../utils/email.js";
 
 const studentSchema = new Schema<IStudentDoc>(
