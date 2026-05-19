@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo } from "react";
-import { Link, useParams } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth0 } from "@auth0/auth0-react";
 import { AxiosError } from "axios";
 import toast from "react-hot-toast";
@@ -18,6 +18,15 @@ import { LoadingSpinner } from "@/components/Atoms/LoadingSpinner";
 import { Text } from "@/components/Atoms/Text";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   getForm,
   getFormResponses,
@@ -26,6 +35,13 @@ import {
   type GoogleFormResponse,
   type GoogleResponseAnswer,
 } from "@/services/googleForms";
+import {
+  getExamByGoogleForm,
+  importGoogleExam,
+  previewGoogleFormImport,
+  type ConfirmedImportRow,
+} from "@/services/exams";
+import type { ExamIdentityConfig, ExamImportPreview, IExam } from "@/types";
 
 function errMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -99,6 +115,27 @@ function possibleScore(items: GoogleFormItem[] = []): number | undefined {
   return scores.reduce((total, score) => total + score, 0);
 }
 
+function examKey(exam?: IExam | null): string | undefined {
+  return exam?._id ?? exam?.id;
+}
+
+function confidenceLabel(value?: number): string {
+  return value === undefined ? "-" : `${Math.round(value * 100)}%`;
+}
+
+function questionLabel(item: GoogleFormItem): string {
+  const key = questionKey(item) ?? "unknown";
+  return `${item.title ?? key} (${key})`;
+}
+
+function identityText(row: ExamImportPreview["responses"][number]): string {
+  const identity = row.extractedIdentity;
+  const primary =
+    identity.fullName ??
+    [identity.firstName, identity.lastName].filter(Boolean).join(" ");
+  return primary || "-";
+}
+
 function AnswerRow({
   question,
   answer,
@@ -155,6 +192,18 @@ export default function GoogleFormResultsPage() {
   const { formId = "" } = useParams();
   const decodedFormId = decodeURIComponent(formId);
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [identityMode, setIdentityMode] = useState<"firstLast" | "fullName">(
+    "firstLast",
+  );
+  const [firstNameQuestionId, setFirstNameQuestionId] = useState("");
+  const [lastNameQuestionId, setLastNameQuestionId] = useState("");
+  const [fullNameQuestionId, setFullNameQuestionId] = useState("");
+  const [preview, setPreview] = useState<ExamImportPreview | null>(null);
+  const [rowSelections, setRowSelections] = useState<
+    Record<string, { studentId: string; skipped: boolean; confidence?: number }>
+  >({});
 
   const getToken = useCallback(
     () =>
@@ -181,6 +230,13 @@ export default function GoogleFormResultsPage() {
     retry: false,
   });
 
+  const importedExamQuery = useQuery({
+    queryKey: ["exam-by-google-form", decodedFormId],
+    queryFn: async () => getExamByGoogleForm(await getToken(), decodedFormId),
+    enabled: isAuthenticated && decodedFormId.length > 0,
+    retry: false,
+  });
+
   useEffect(() => {
     if (resultsQuery.isError) {
       toast.error(`Results: ${errMessage(resultsQuery.error)}`);
@@ -193,6 +249,102 @@ export default function GoogleFormResultsPage() {
     [resultsQuery.data?.form.items],
   );
   const maxScore = possibleScore(resultsQuery.data?.form.items);
+  const questionOptions = useMemo(
+    () =>
+      (resultsQuery.data?.form.items ?? [])
+        .map((item) => ({ id: questionKey(item), label: questionLabel(item) }))
+        .filter((item): item is { id: string; label: string } => Boolean(item.id)),
+    [resultsQuery.data?.form.items],
+  );
+  const identityConfig = useMemo<ExamIdentityConfig | null>(() => {
+    if (identityMode === "fullName") {
+      return fullNameQuestionId
+        ? { mode: "fullName", fullNameQuestionId }
+        : null;
+    }
+    return firstNameQuestionId && lastNameQuestionId
+      ? { mode: "firstLast", firstNameQuestionId, lastNameQuestionId }
+      : null;
+  }, [firstNameQuestionId, fullNameQuestionId, identityMode, lastNameQuestionId]);
+  const savedExamId = examKey(importedExamQuery.data);
+
+  const previewMutation = useMutation({
+    mutationFn: async () => {
+      if (!identityConfig) {
+        throw new Error("Choose identity questions first");
+      }
+      return previewGoogleFormImport(await getToken(), decodedFormId, identityConfig);
+    },
+    onSuccess: (data) => {
+      setPreview(data);
+      setRowSelections(
+        Object.fromEntries(
+          data.responses.map((row) => [
+            row.responseId,
+            {
+              studentId: row.predictedStudent?.studentObjectId ?? "",
+              skipped: false,
+              confidence: row.predictedStudent?.confidence,
+            },
+          ]),
+        ),
+      );
+      toast.success("Import preview ready");
+    },
+    onError: (error) => toast.error(`Preview failed: ${errMessage(error)}`),
+  });
+
+  const importMutation = useMutation({
+    mutationFn: async () => {
+      if (!identityConfig || !preview) {
+        throw new Error("Run preview first");
+      }
+      const confirmedRows = preview.responses.reduce<ConfirmedImportRow[]>(
+        (rows, row) => {
+          const selected = rowSelections[row.responseId];
+          if (!selected || selected.skipped || !selected.studentId) {
+            return rows;
+          }
+          rows.push({
+            responseId: row.responseId,
+            studentId: selected.studentId,
+            matchConfidence: selected.confidence ?? row.predictedStudent?.confidence ?? 1,
+          });
+          return rows;
+        },
+        [],
+      );
+      return importGoogleExam(
+        await getToken(),
+        decodedFormId,
+        identityConfig,
+        confirmedRows,
+      );
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["exam-by-google-form", decodedFormId],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["exam-results"] });
+      toast.success("Exam imported");
+      const importedId = examKey(data.exam);
+      if (importedId) {
+        navigate(`/exams/${importedId}`);
+      }
+    },
+    onError: (error) => toast.error(`Import failed: ${errMessage(error)}`),
+  });
+
+  const canSavePreview =
+    preview !== null &&
+    preview.responses.every((row) => {
+      const selected = rowSelections[row.responseId];
+      return selected?.skipped || Boolean(selected?.studentId);
+    }) &&
+    preview.responses.some((row) => {
+      const selected = rowSelections[row.responseId];
+      return selected && !selected.skipped && selected.studentId;
+    });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-8">
@@ -219,6 +371,11 @@ export default function GoogleFormResultsPage() {
           <Badge variant="outline">
             {maxScore === undefined ? "No points" : `${maxScore} points`}
           </Badge>
+          {savedExamId ? (
+            <Button asChild>
+              <Link to={`/exams/${savedExamId}`}>Go to Exam</Link>
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -236,6 +393,202 @@ export default function GoogleFormResultsPage() {
         </div>
       ) : (
         <div className="space-y-3">
+          {!savedExamId ? (
+            <div className="rounded-md border border-gray-200 bg-white p-5">
+              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <Text className="font-semibold">Import as Exam</Text>
+                  <Text variant="small" color="muted">
+                    Select the identity questions, preview matches, then confirm rows.
+                  </Text>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => previewMutation.mutate()}
+                    disabled={!identityConfig || previewMutation.isPending}
+                  >
+                    {previewMutation.isPending ? "Previewing..." : "Preview"}
+                  </Button>
+                  <Button
+                    onClick={() => importMutation.mutate()}
+                    disabled={!canSavePreview || importMutation.isPending}
+                  >
+                    {importMutation.isPending ? "Saving..." : "Save Exam"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <label className="space-y-1">
+                  <Text variant="caption" color="muted">Identity mode</Text>
+                  <select
+                    className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm"
+                    value={identityMode}
+                    onChange={(event) => {
+                      setIdentityMode(event.target.value as "firstLast" | "fullName");
+                      setPreview(null);
+                    }}
+                  >
+                    <option value="firstLast">First name + last name</option>
+                    <option value="fullName">Full name</option>
+                  </select>
+                </label>
+                {identityMode === "firstLast" ? (
+                  <>
+                    <label className="space-y-1">
+                      <Text variant="caption" color="muted">First name question</Text>
+                      <select
+                        className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm"
+                        value={firstNameQuestionId}
+                        onChange={(event) => {
+                          setFirstNameQuestionId(event.target.value);
+                          setPreview(null);
+                        }}
+                      >
+                        <option value="">Select question</option>
+                        {questionOptions.map((question) => (
+                          <option key={question.id} value={question.id}>
+                            {question.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <Text variant="caption" color="muted">Last name question</Text>
+                      <select
+                        className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm"
+                        value={lastNameQuestionId}
+                        onChange={(event) => {
+                          setLastNameQuestionId(event.target.value);
+                          setPreview(null);
+                        }}
+                      >
+                        <option value="">Select question</option>
+                        {questionOptions.map((question) => (
+                          <option key={question.id} value={question.id}>
+                            {question.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </>
+                ) : (
+                  <label className="space-y-1 md:col-span-2">
+                    <Text variant="caption" color="muted">Full name question</Text>
+                    <select
+                      className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm"
+                      value={fullNameQuestionId}
+                      onChange={(event) => {
+                        setFullNameQuestionId(event.target.value);
+                        setPreview(null);
+                      }}
+                    >
+                      <option value="">Select question</option>
+                      {questionOptions.map((question) => (
+                        <option key={question.id} value={question.id}>
+                          {question.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
+
+              {preview ? (
+                <div className="mt-5 overflow-x-auto rounded-md border border-gray-200">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Identity</TableHead>
+                        <TableHead>Prediction</TableHead>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Score</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {preview.responses.map((row) => {
+                        const selection = rowSelections[row.responseId] ?? {
+                          studentId: "",
+                          skipped: false,
+                        };
+                        return (
+                          <TableRow key={row.responseId}>
+                            <TableCell>
+                              <div className="font-medium">{identityText(row)}</div>
+                              <div className="text-xs text-gray-500">
+                                {row.responseId.slice(0, 18)}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {row.predictedStudent ? (
+                                <>
+                                  <div>{row.predictedStudent.englishName}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {confidenceLabel(row.predictedStudent.confidence)}
+                                  </div>
+                                </>
+                              ) : (
+                                <Badge variant="outline">Needs review</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <select
+                                className="h-10 w-56 rounded-md border border-gray-300 bg-white px-3 text-sm"
+                                value={selection.studentId}
+                                disabled={selection.skipped}
+                                onChange={(event) =>
+                                  setRowSelections((current) => ({
+                                    ...current,
+                                    [row.responseId]: {
+                                      ...selection,
+                                      studentId: event.target.value,
+                                    },
+                                  }))
+                                }
+                              >
+                                <option value="">Select student</option>
+                                {preview.students.map((student) => (
+                                  <option
+                                    key={student._id ?? student.studentId}
+                                    value={student._id ?? student.id ?? ""}
+                                  >
+                                    {student.englishName} / {student.hebrewName}
+                                  </option>
+                                ))}
+                              </select>
+                            </TableCell>
+                            <TableCell>{scoreLabel(row.score, preview.form.maxScore)}</TableCell>
+                            <TableCell>
+                              <label className="flex items-center gap-2 text-sm">
+                                <Input
+                                  type="checkbox"
+                                  className="h-4 w-4"
+                                  checked={selection.skipped}
+                                  onChange={(event) =>
+                                    setRowSelections((current) => ({
+                                      ...current,
+                                      [row.responseId]: {
+                                        ...selection,
+                                        skipped: event.target.checked,
+                                      },
+                                    }))
+                                  }
+                                />
+                                Skip
+                              </label>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           {responses.map((response, index) => {
             const answers = Object.entries(response.answers ?? {});
             const score = responseScore(response);

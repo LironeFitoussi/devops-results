@@ -1,9 +1,11 @@
 import type { ComponentType, ReactNode } from "react";
-import { FileText, GraduationCap, Home, LayoutDashboard } from "lucide-react";
+import { ClipboardList, FileText, GraduationCap, Home, LayoutDashboard } from "lucide-react";
 import type { SVGProps } from "react";
 import HomePage, { HomePageLoader } from "../pages/HomePage";
 import GoogleFormsPage from "../pages/GoogleFormsPage";
 import GoogleFormResultsPage from "../pages/GoogleFormResultsPage";
+import ExamsPage from "../pages/ExamsPage";
+import ExamResultsPage from "../pages/ExamResultsPage";
 import StudentsPage from "../pages/StudentsPage";
 import StudentDashboardPage from "../pages/StudentDashboardPage";
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -63,6 +65,15 @@ export const routeConfig: RouteConfig[] = [
     requiredRole: "admin",
   },
   {
+    path: "/exams",
+    name: "Exams",
+    Component: ExamsPage,
+    icon: ClipboardList,
+    showInSidebar: true,
+    requireAuth: true,
+    requiredRole: "admin",
+  },
+  {
     path: "/students",
     name: "Students",
     Component: StudentsPage,
@@ -75,6 +86,14 @@ export const routeConfig: RouteConfig[] = [
     path: "/google-forms/:formId",
     name: "Google Form Results",
     Component: GoogleFormResultsPage,
+    showInSidebar: false,
+    requireAuth: true,
+    requiredRole: "admin",
+  },
+  {
+    path: "/exams/:examId",
+    name: "Exam Results",
+    Component: ExamResultsPage,
     showInSidebar: false,
     requireAuth: true,
     requiredRole: "admin",

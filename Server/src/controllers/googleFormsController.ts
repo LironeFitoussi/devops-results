@@ -13,6 +13,8 @@ import {
     getForm,
     getResponses,
 } from "../services/googleFormsService.js";
+import { buildImportPreview } from "../services/examImportService.js";
+import { importPreviewSchema } from "../zod/examsZod.js";
 
 const CLIENT_URL = process.env.CLIENT_URL ?? "http://localhost:5173";
 
@@ -97,6 +99,14 @@ class GoogleFormsController {
         const auth = await adminGoogleClient(req);
         const responses = await getResponses(auth, id);
         res.status(200).json({ success: true, data: responses });
+    }
+
+    async importPreview(req: Request, res: Response) {
+        const { id } = formIdParamSchema.parse(req.params);
+        const { identityConfig } = importPreviewSchema.parse(req.body);
+        const auth = await adminGoogleClient(req);
+        const preview = await buildImportPreview(auth, id, identityConfig);
+        res.status(200).json({ success: true, data: preview });
     }
 }
 

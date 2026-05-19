@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
-import { fetchUser } from '../redux/slices/userSlice';
+import { fetchUser, setError } from '../redux/slices/userSlice';
 import { useAuth0 } from '@auth0/auth0-react';
 import type { Auth0User } from '@/types';
 import api from '@/services/api';
@@ -12,14 +12,21 @@ interface AppInitializerProps {
 
 const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const dispatch = useAppDispatch();
-  const { loading, error } = useAppSelector((state) => state.user);
+  const { user: appUser, loading, error } = useAppSelector((state) => state.user);
   const { isAuthenticated, user, getAccessTokenSilently, isLoading: auth0Loading } = useAuth0();
 
   useEffect(() => {
     const initializeApp = async () => {
-      // Only initialize if Auth0 has finished loading and user is authenticated
-      if (!auth0Loading && isAuthenticated && user) {
-        // Set API headers with token
+      if (auth0Loading) {
+        return;
+      }
+
+      if (!isAuthenticated) {
+        delete api.defaults.headers.common['Authorization'];
+        return;
+      }
+
+      if (user) {
         try {
           const token = await getAccessTokenSilently({
             authorizationParams: {
@@ -27,17 +34,17 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
               scope: 'openid profile email',
             }
           });
-          
+
           const bearerToken = `Bearer ${token}`;
           api.defaults.headers.common['Authorization'] = bearerToken;
-          
-          // Fetch user data
+
           dispatch(fetchUser({
             userData: user as Auth0User,
             token: token as string,
           }));
         } catch (error) {
           console.error('Failed to set API headers:', error);
+          dispatch(setError('Failed to initialize authentication'));
         }
       }
     };
@@ -55,7 +62,7 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   }
 
   // Show loading state while fetching user (only if authenticated)
-  if (isAuthenticated && loading) {
+  if (isAuthenticated && (loading || (!appUser && !error))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <LoadingSpinner size="lg" text="Loading user data..." />

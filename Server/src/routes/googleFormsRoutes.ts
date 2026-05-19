@@ -27,5 +27,10 @@ router.get(
     adminOnly,
     asyncHandler(ctrl.getResponses.bind(ctrl)),
 );
+router.post(
+    "/forms/:id/import-preview",
+    adminOnly,
+    asyncHandler(ctrl.importPreview.bind(ctrl)),
+);
 
 export default router;
