@@ -34,6 +34,9 @@ if (!CLIENT_URL) {
     throw new Error("CLIENT_URL is not set");
 }
 
+// Trust Vercel/reverse proxy for X-Forwarded-For (rate-limit, req.ip)
+app.set("trust proxy", 1);
+
 // Cors
 app.use(cors({
     origin: process.env.CLIENT_URL,
