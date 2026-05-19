@@ -1,16 +1,39 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import mongoose from 'mongoose';
+
+type AsyncRouteHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => unknown | Promise<unknown>;
+
+type ErrorDetails = Error & {
+  statusCode?: number;
+  errors?: unknown;
+  code?: number;
+  keyValue?: Record<string, unknown>;
+  path?: string;
+  value?: unknown;
+};
+
+type ErrorResponse = {
+  success: false;
+  error: string;
+  stack?: string;
+  errors?: unknown;
+};
 
 // Simple error wrapper for async functions
-export const asyncHandler = (fn: Function) => {
+export const asyncHandler = (fn: AsyncRouteHandler) => {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 };
 
 // Enhanced error handler middleware
-export const errorHandler = (error: any, req: Request, res: Response, next: NextFunction) => {
+export const errorHandler = (error: ErrorDetails, req: Request, res: Response, next: NextFunction) => {
+  void req;
+  void next;
   // console.error('Error:', error);
   
   // Handle different types of errors
@@ -21,7 +44,7 @@ export const errorHandler = (error: any, req: Request, res: Response, next: Next
   const message = error.message || 'Internal server error';
   
   // Enhanced error response
-  const errorResponse: any = {
+  const errorResponse: ErrorResponse = {
     success: false,
     error: message,
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
@@ -37,9 +60,9 @@ export const errorHandler = (error: any, req: Request, res: Response, next: Next
 
 export class AppError extends Error {
   statusCode: number;
-  errors?: any;
+  errors?: unknown;
   
-  constructor(message: string, statusCode: number = 500, errors?: any) {
+  constructor(message: string, statusCode: number = 500, errors?: unknown) {
     super(message);
     this.statusCode = statusCode;
     this.errors = errors;
@@ -47,20 +70,22 @@ export class AppError extends Error {
 }
 
 // Comprehensive Mongoose Error Handler
-export const handleMongooseError = (error: any) => {
+export const handleMongooseError = (error: ErrorDetails) => {
   // Duplicate key error (E11000)
   if (error.code === 11000) {
-    const field = Object.keys(error.keyValue)[0];
-    const value = error.keyValue[field as string];
+    const field = Object.keys(error.keyValue ?? {})[0] ?? 'field';
+    const value = error.keyValue?.[field];
     const message = `${field} '${value}' already exists`;
     return new AppError(message, 400);
   }
 
   // Validation error
   if (error.name === 'ValidationError') {
-    const errors: any = {};
-    Object.values(error.errors).forEach((err: any) => {
-      errors[err.path] = err.message;
+    const errors: Record<string, string> = {};
+    Object.values((error.errors ?? {}) as Record<string, ErrorDetails>).forEach((err) => {
+      if (err.path) {
+        errors[err.path] = err.message;
+      }
     });
     return new AppError('Validation failed', 400, errors);
   }
@@ -85,10 +110,10 @@ export const handleMongooseError = (error: any) => {
 };
 
 // Zod Validation Error Handler
-export const handleZodError = (error: any) => {
+export const handleZodError = (error: ErrorDetails) => {
   if (error instanceof ZodError) {
-    const errors: any = {};
-    error.issues.forEach((err: any) => {
+    const errors: Record<string, string> = {};
+    error.issues.forEach((err) => {
       const path = err.path.join('.');
       errors[path] = err.message;
     });

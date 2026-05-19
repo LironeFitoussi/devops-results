@@ -11,5 +11,6 @@ export interface IUser {
     updatedAt?: string;
     createdAt?: string;
     phone?: string;
-    role?: 'admin' | 'user' | 'instructor' | 'Coordinator' | 'staff' | 'Instructor';
+    student?: string;
+    role?: 'admin' | 'user' | 'student' | 'instructor' | 'Coordinator' | 'staff' | 'Instructor';
 }

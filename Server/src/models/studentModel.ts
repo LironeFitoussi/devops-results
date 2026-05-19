@@ -32,7 +32,11 @@ const studentSchema = new Schema<IStudentDoc>(
 
 studentSchema.pre("validate", function normalizeStudentEmail(next) {
     const normalized = normalizeEmail(this.email);
-    this.normalizedEmail = normalized || undefined;
+    if (normalized) {
+        this.normalizedEmail = normalized;
+    } else {
+        this.set("normalizedEmail", undefined);
+    }
     this.email = this.email?.trim() ?? "";
     next();
 });

@@ -11,6 +11,7 @@ export interface MenuItemProps {
   subMenus?: Array<{ label: string; path: string }>;
   isExpanded?: boolean;
   isActive?: boolean;
+  isCollapsed?: boolean;
   onToggle?: () => void;
   className?: string;
 }
@@ -22,6 +23,7 @@ export default function MenuItem({
   subMenus,
   isExpanded = false,
   isActive = false,
+  isCollapsed = false,
   onToggle,
   className,
 }: MenuItemProps) {
@@ -33,24 +35,28 @@ export default function MenuItem({
         <>
           <button
             onClick={onToggle}
+            title={isCollapsed ? label : undefined}
+            aria-label={label}
             className={cn(
               "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors",
+              isCollapsed && "justify-center px-2",
               isActive
                 ? "bg-blue-50 text-blue-600"
                 : "text-gray-700 hover:bg-gray-100"
             )}
           >
-            <div className="flex items-center gap-3">
+            <div className={cn("flex items-center gap-3", isCollapsed && "gap-0")}>
               {icon}
-              <span>{label}</span>
+              {!isCollapsed && <span>{label}</span>}
             </div>
-            {isExpanded ? (
-              <Icon icon={ChevronDown} size="sm" />
-            ) : (
-              <Icon icon={ChevronRight} size="sm" />
-            )}
+            {!isCollapsed &&
+              (isExpanded ? (
+                <Icon icon={ChevronDown} size="sm" />
+              ) : (
+                <Icon icon={ChevronRight} size="sm" />
+              ))}
           </button>
-          {isExpanded && (
+          {!isCollapsed && isExpanded && (
             <ul className="mt-1 ml-8 space-y-1">
               {subMenus.map((subMenu) => (
                 <li key={subMenu.path}>
@@ -68,15 +74,18 @@ export default function MenuItem({
       ) : (
         <Link
           to={path || "#"}
+          title={isCollapsed ? label : undefined}
+          aria-label={label}
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+            isCollapsed && "justify-center gap-0 px-2",
             isActive
               ? "bg-blue-50 text-blue-600"
               : "text-gray-700 hover:bg-gray-100"
           )}
         >
           {icon}
-          <span>{label}</span>
+          {!isCollapsed && <span>{label}</span>}
         </Link>
       )}
     </li>

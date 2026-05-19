@@ -1,10 +1,11 @@
 import type { ComponentType, ReactNode } from "react";
-import { FileText, GraduationCap, Home } from "lucide-react";
+import { FileText, GraduationCap, Home, LayoutDashboard } from "lucide-react";
 import type { SVGProps } from "react";
 import HomePage, { HomePageLoader } from "../pages/HomePage";
 import GoogleFormsPage from "../pages/GoogleFormsPage";
 import GoogleFormResultsPage from "../pages/GoogleFormResultsPage";
 import StudentsPage from "../pages/StudentsPage";
+import StudentDashboardPage from "../pages/StudentDashboardPage";
 import ProtectedRoute from "../components/ProtectedRoute";
 
 // Type for Lucide icons
@@ -42,6 +43,15 @@ export const routeConfig: RouteConfig[] = [
     icon: Home,
     showInSidebar: true,
     index: true,
+  },
+  {
+    path: "/student-dashboard",
+    name: "Dashboard",
+    Component: StudentDashboardPage,
+    icon: LayoutDashboard,
+    showInSidebar: true,
+    requireAuth: true,
+    requiredRole: "student",
   },
   {
     path: "/google-forms",

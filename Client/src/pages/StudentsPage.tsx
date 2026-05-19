@@ -1,5 +1,8 @@
-﻿import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth0 } from "@auth0/auth0-react";
+import toast from "react-hot-toast";
 import {
   CheckCircle2,
   Clock,
@@ -24,198 +27,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-type StudentStatus = "active" | "pending" | "graduated";
-
-type Student = {
-  id: string;
-  hebrewName: string;
-  englishName: string;
-  studentId: string;
-  email: string;
-  status: StudentStatus;
-};
-
-const STORAGE_KEY = "students-management:v2";
-
-const starterStudents: Student[] = [
-  {
-    id: "student-1",
-    hebrewName: "×’×™× ×¤×¨×¡",
-    englishName: "Guy Peres",
-    studentId: "326077229",
-    email: "GuyguyPeres@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-2",
-    hebrewName: "××œ×›×¡× ×“×¨ ×¦×œ×™×“×•× ×•×‘×™×¥",
-    englishName: "Alexander Chalidunovych",
-    studentId: "321351769",
-    email: "Sania1199.9966@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-3",
-    hebrewName: "×™×•×ª× ×ž×™×›××œ ×‘×˜×©",
-    englishName: "Yotam Michael Betash",
-    studentId: "212481394",
-    email: "yotambt1@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-4",
-    hebrewName: "×©×•×Ÿ ×©×ž×™×œ×•×‘",
-    englishName: "Sean Shmilov",
-    studentId: "214509440",
-    email: "Sean.Shmelyov@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-6",
-    hebrewName: "×ž×™×›××œ × ×•×’×¨×™××Ÿ",
-    englishName: "Michael Noghryan",
-    studentId: "322709825",
-    email: "MichaelNogh@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-7",
-    hebrewName: "×™×•×‘×œ ×“×¨",
-    englishName: "Yuval Dar",
-    studentId: "203248091",
-    email: "yuvaldar@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-8",
-    hebrewName: "×œ×™××œ ×—×–×Ÿ",
-    englishName: "Liel Hazzan",
-    studentId: "324955079",
-    email: "leal.hazzan@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-9",
-    hebrewName: "×¤×™×œ×™×¤ ××™×‘×—×™×‘",
-    englishName: "Philip Ivahiv",
-    studentId: "212648893",
-    email: "IvahivPhilipusik@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-10",
-    hebrewName: "×™×•×‘×œ ×¤×¨×§×©",
-    englishName: "Yuval Farkash",
-    studentId: "328130810",
-    email: "yuvalfarkash85@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-11",
-    hebrewName: "×™×”×•×“×” ×¤×“×¨",
-    englishName: "Yehuda Feder",
-    studentId: "322218843",
-    email: "yhodafeder@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-12",
-    hebrewName: "×ž×§×¡×™× ×¨×™×™×§× ×™×š",
-    englishName: "Maxim Raikinakh",
-    studentId: "212511653",
-    email: "maximri2411@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-13",
-    hebrewName: "×“× ×™××œ ×™×¢×§×‘",
-    englishName: "Daniel Yacov",
-    studentId: "324181965",
-    email: "danielyacc123@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-14",
-    hebrewName: "×× ×˜×•× ×™×• (×˜×•× ×™) ×•×¨×™×Ÿ",
-    englishName: "Antony Verin",
-    studentId: "214789307",
-    email: "toniv7891@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-15",
-    hebrewName: "××œ×™ ××œ×™×”×• ×—×™×™×ž×•×‘",
-    englishName: "Eli Eliyaho Haymov",
-    studentId: "314651340",
-    email: "idf775@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-16",
-    hebrewName: "×”×¨××œ ×•×œ×¤×™×©",
-    englishName: "Harel Valfish",
-    studentId: "326256096",
-    email: "harelvalfish@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-17",
-    hebrewName: "×™×•× ×™ ×‘× ××¨×•×¡",
-    englishName: "Yoni Benarrous",
-    studentId: "345787196",
-    email: "contact.yonibena@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-18",
-    hebrewName: "×“× ×™××œ ×¨×•×¡×ž×Ÿ",
-    englishName: "Daniel Rosman",
-    studentId: "211765565",
-    email: "danielros883@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-19",
-    hebrewName: "×¢×•×ž×¨ ×œ×•×™",
-    englishName: "Omer Levi",
-    studentId: "323078907",
-    email: "01omerlevi@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-20",
-    hebrewName: "××ž×™×¨ ×©×—×",
-    englishName: "Amir Shacham",
-    studentId: "209164433",
-    email: "shacham.amir@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-21",
-    hebrewName: "×“×•×“ ×©× ×™×¨",
-    englishName: "David Snir",
-    studentId: "322453986",
-    email: "david.snir@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-22",
-    hebrewName: "× ×™×‘ ×‘×¨",
-    englishName: "Niv Bar",
-    studentId: "211604186",
-    email: "bar.niv2000@gmail.com",
-    status: "active",
-  },
-  {
-    id: "student-23",
-    hebrewName: "×“×•×“ ×¨×•×‘×™×Ÿ",
-    englishName: "David Rubin",
-    studentId: "205",
-    email: "",
-    status: "pending",
-  },
-];
+import { LoadingSpinner } from "@/components/Atoms";
+import {
+  createStudent,
+  deleteStudent,
+  getStudents,
+  updateStudent,
+} from "@/services/students";
+import type { IStudent, StudentStatus } from "@/types";
 
 const statusStyles: Record<StudentStatus, string> = {
   active: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -223,37 +42,123 @@ const statusStyles: Record<StudentStatus, string> = {
   graduated: "bg-slate-100 text-slate-700 border-slate-200",
 };
 
-const loadStudents = () => {
-  if (typeof window === "undefined") {
-    return starterStudents;
-  }
+const EMPTY_STUDENTS: IStudent[] = [];
 
-  const storedStudents = window.localStorage.getItem(STORAGE_KEY);
-  if (!storedStudents) {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(starterStudents));
-    return starterStudents;
-  }
+function studentKey(student: IStudent): string {
+  return student._id ?? student.id ?? student.studentId;
+}
 
-  try {
-    const parsedStudents = JSON.parse(storedStudents) as Student[];
-    return Array.isArray(parsedStudents) ? parsedStudents : starterStudents;
-  } catch {
-    return starterStudents;
-  }
-};
+function messageFromError(error: unknown): string {
+  return error instanceof Error ? error.message : "Student action failed";
+}
 
 export default function StudentsPage() {
-  const [students, setStudents] = useState<Student[]>(loadStudents);
   const [hebrewName, setHebrewName] = useState("");
   const [englishName, setEnglishName] = useState("");
   const [studentId, setStudentId] = useState("");
   const [email, setEmail] = useState("");
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingEmailStudent, setEditingEmailStudent] = useState<Student | null>(null);
-  const [editingEmail, setEditingEmail] = useState("");
-  const [emailError, setEmailError] = useState("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<IStudent | null>(null);
+  const [editHebrewName, setEditHebrewName] = useState("");
+  const [editEnglishName, setEditEnglishName] = useState("");
+  const [editStudentId, setEditStudentId] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editStatus, setEditStatus] = useState<StudentStatus>("active");
+  const [editError, setEditError] = useState("");
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const queryClient = useQueryClient();
+
+  const getToken = useCallback(
+    () =>
+      getAccessTokenSilently({
+        authorizationParams: {
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+          scope: "openid profile email",
+        },
+      }),
+    [getAccessTokenSilently],
+  );
+
+  const studentsQuery = useQuery({
+    queryKey: ["students"],
+    queryFn: async () => getStudents(await getToken()),
+    enabled: isAuthenticated,
+  });
+
+  const refreshStudents = () => {
+    queryClient.invalidateQueries({ queryKey: ["students"] });
+  };
+
+  const createMutation = useMutation({
+    mutationFn: async () =>
+      createStudent(await getToken(), {
+        hebrewName: hebrewName.trim(),
+        englishName: englishName.trim(),
+        studentId: studentId.trim(),
+        email: email.trim(),
+      }),
+    onSuccess: () => {
+      closeAddDialog();
+      refreshStudents();
+      toast.success("Student added");
+    },
+    onError: (mutationError) => {
+      toast.error(messageFromError(mutationError));
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({
+      id,
+      status,
+    }: {
+      id: string;
+      status: StudentStatus;
+    }) => updateStudent(await getToken(), id, { status }),
+    onSuccess: refreshStudents,
+    onError: (mutationError) => {
+      toast.error(messageFromError(mutationError));
+    },
+  });
+
+  const updateStudentMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingStudent) {
+        throw new Error("No student selected");
+      }
+
+      return updateStudent(await getToken(), studentKey(editingStudent), {
+        hebrewName: editHebrewName.trim(),
+        englishName: editEnglishName.trim(),
+        studentId: editStudentId.trim(),
+        email: editEmail.trim(),
+        status: editStatus,
+      });
+    },
+    onSuccess: () => {
+      closeEditDialog();
+      refreshStudents();
+      toast.success("Student updated");
+    },
+    onError: (mutationError) => {
+      toast.error(messageFromError(mutationError));
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => deleteStudent(await getToken(), id),
+    onSuccess: () => {
+      refreshStudents();
+      toast.success("Student deleted");
+    },
+    onError: (mutationError) => {
+      toast.error(messageFromError(mutationError));
+    },
+  });
+
+  const students = studentsQuery.data ?? EMPTY_STUDENTS;
 
   const visibleStudents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -266,34 +171,29 @@ export default function StudentsPage() {
         student.hebrewName,
         student.englishName,
         student.studentId,
-        student.email,
+        student.email ?? "",
         student.status,
       ]
         .join(" ")
         .toLowerCase()
-        .includes(normalizedQuery)
+        .includes(normalizedQuery),
     );
   }, [query, students]);
 
   const activeCount = useMemo(
     () => students.filter((student) => student.status === "active").length,
-    [students]
+    [students],
   );
 
   const pendingCount = useMemo(
     () => students.filter((student) => student.status === "pending").length,
-    [students]
+    [students],
   );
 
   const missingEmailCount = useMemo(
     () => students.filter((student) => !student.email).length,
-    [students]
+    [students],
   );
-
-  const persistStudents = (nextStudents: Student[]) => {
-    setStudents(nextStudents);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextStudents));
-  };
 
   const resetForm = () => {
     setHebrewName("");
@@ -303,98 +203,53 @@ export default function StudentsPage() {
     setError("");
   };
 
-  const closeAddModal = () => {
-    setIsAddModalOpen(false);
+  const closeAddDialog = () => {
+    setIsAddDialogOpen(false);
     resetForm();
   };
 
-  const openEditEmailModal = (student: Student) => {
-    setEditingEmailStudent(student);
-    setEditingEmail(student.email);
-    setEmailError("");
+  const openEditDialog = (student: IStudent) => {
+    setEditingStudent(student);
+    setEditHebrewName(student.hebrewName);
+    setEditEnglishName(student.englishName);
+    setEditStudentId(student.studentId);
+    setEditEmail(student.email ?? "");
+    setEditStatus(student.status);
+    setEditError("");
   };
 
-  const closeEditEmailModal = () => {
-    setEditingEmailStudent(null);
-    setEditingEmail("");
-    setEmailError("");
+  const closeEditDialog = () => {
+    setEditingStudent(null);
+    setEditHebrewName("");
+    setEditEnglishName("");
+    setEditStudentId("");
+    setEditEmail("");
+    setEditStatus("active");
+    setEditError("");
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const normalizedStudentId = studentId.trim();
-    if (!hebrewName.trim() || !englishName.trim() || !normalizedStudentId) {
+    if (!hebrewName.trim() || !englishName.trim() || !studentId.trim()) {
       setError("Fill in Hebrew name, English name, and ID.");
       return;
     }
 
-    const idExists = students.some((student) => student.studentId === normalizedStudentId);
-    if (idExists) {
-      setError("A student with this ID already exists.");
-      return;
-    }
-
-    const nextStudents: Student[] = [
-      {
-        id: crypto.randomUUID(),
-        hebrewName: hebrewName.trim(),
-        englishName: englishName.trim(),
-        studentId: normalizedStudentId,
-        email: email.trim(),
-        status: email.trim() ? "active" : "pending",
-      },
-      ...students,
-    ];
-
-    persistStudents(nextStudents);
-    closeAddModal();
+    setError("");
+    createMutation.mutate();
   };
 
-  const updateStatus = (studentRecordId: string, status: StudentStatus) => {
-    persistStudents(
-      students.map((student) =>
-        student.id === studentRecordId ? { ...student, status } : student
-      )
-    );
-  };
-
-  const deleteStudent = (studentRecordId: string) => {
-    persistStudents(students.filter((student) => student.id !== studentRecordId));
-  };
-
-  const handleEmailUpdate = (event: FormEvent<HTMLFormElement>) => {
+  const handleEditSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!editingEmailStudent) {
+    if (!editHebrewName.trim() || !editEnglishName.trim() || !editStudentId.trim()) {
+      setEditError("Fill in Hebrew name, English name, and ID.");
       return;
     }
 
-    const normalizedEmail = editingEmail.trim();
-    const emailExists = students.some(
-      (student) =>
-        student.id !== editingEmailStudent.id &&
-        student.email.toLowerCase() === normalizedEmail.toLowerCase() &&
-        normalizedEmail
-    );
-
-    if (emailExists) {
-      setEmailError("That email is already assigned to another student.");
-      return;
-    }
-
-    persistStudents(
-      students.map((student) =>
-        student.id === editingEmailStudent.id
-          ? {
-              ...student,
-              email: normalizedEmail,
-              status: normalizedEmail && student.status === "pending" ? "active" : student.status,
-            }
-          : student
-      )
-    );
-    closeEditEmailModal();
+    setEditError("");
+    updateStudentMutation.mutate();
   };
 
   return (
@@ -418,6 +273,14 @@ export default function StudentsPage() {
             <p className="max-w-2xl text-sm text-slate-600">
               Manage each student with Hebrew name, English name, ID, and email.
             </p>
+            <Button
+              type="button"
+              className="mt-5"
+              onClick={() => setIsAddDialogOpen(true)}
+            >
+              <Plus className="size-4" />
+              Add student
+            </Button>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -426,38 +289,47 @@ export default function StudentsPage() {
                 <Users className="size-4" />
                 <span className="text-xs font-medium">Students</span>
               </div>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">{students.length}</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
+                {students.length}
+              </p>
             </div>
             <div className="rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
               <div className="flex items-center gap-2 text-emerald-600">
                 <CheckCircle2 className="size-4" />
                 <span className="text-xs font-medium">Active</span>
               </div>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">{activeCount}</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
+                {activeCount}
+              </p>
             </div>
             <div className="rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
               <div className="flex items-center gap-2 text-amber-600">
                 <Clock className="size-4" />
                 <span className="text-xs font-medium">Pending</span>
               </div>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">{pendingCount}</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
+                {pendingCount}
+              </p>
             </div>
             <div className="rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
               <div className="flex items-center gap-2 text-red-600">
                 <Mail className="size-4" />
                 <span className="text-xs font-medium">No email</span>
               </div>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">{missingEmailCount}</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
+                {missingEmailCount}
+              </p>
             </div>
           </div>
         </header>
 
         <section>
-
           <div className="rounded-md border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-4 border-b border-slate-200 p-5 md:flex-row md:items-center md:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-slate-950">Student directory</h2>
+                <h2 className="text-lg font-semibold text-slate-950">
+                  Student directory
+                </h2>
                 <p className="text-sm text-slate-500">
                   Search by Hebrew name, English name, ID, email, or status.
                 </p>
@@ -472,106 +344,127 @@ export default function StudentsPage() {
                     placeholder="Search students"
                   />
                 </label>
-                <Button type="button" size="sm" onClick={() => setIsAddModalOpen(true)}>
-                  <Plus className="size-4" />
-                  Add
-                </Button>
               </div>
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>#</TableHead>
-                  <TableHead className="text-right">Hebrew name</TableHead>
-                  <TableHead>English name</TableHead>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-24 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleStudents.map((student, index) => (
-                  <TableRow key={student.id}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell className="text-right font-medium text-slate-950" dir="rtl">
-                      {student.hebrewName}
-                    </TableCell>
-                    <TableCell className="font-medium text-slate-950">
-                      {student.englishName}
-                    </TableCell>
-                    <TableCell>{student.studentId}</TableCell>
-                    <TableCell>
-                      {student.email ? (
-                        <a
-                          href={`mailto:${student.email}`}
-                          className="inline-flex items-center gap-2 text-blue-700 hover:text-blue-900"
-                        >
-                          <Mail className="size-4" />
-                          {student.email}
-                        </a>
-                      ) : (
-                        <span className="text-slate-400">No email</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Badge className={statusStyles[student.status]} variant="outline">
-                          <ShieldCheck className="size-3" />
-                          {student.status}
-                        </Badge>
-                        <select
-                          value={student.status}
-                          onChange={(event) =>
-                            updateStatus(student.id, event.target.value as StudentStatus)
-                          }
-                          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-700 shadow-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                          aria-label={`Update ${student.englishName} status`}
-                        >
-                          <option value="active">Active</option>
-                          <option value="pending">Pending</option>
-                          <option value="graduated">Graduated</option>
-                        </select>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditEmailModal(student)}
-                          aria-label={`Edit ${student.englishName} email`}
-                        >
-                          <Pencil className="size-4 text-blue-700" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteStudent(student.id)}
-                          aria-label={`Delete ${student.englishName}`}
-                        >
-                          <Trash2 className="size-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {visibleStudents.length === 0 ? (
+            {studentsQuery.isLoading ? (
+              <div className="flex justify-center py-16">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : studentsQuery.isError ? (
+              <div className="p-6 text-sm text-red-600">
+                Could not load students.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-slate-500">
-                      No students match your search.
-                    </TableCell>
+                    <TableHead>#</TableHead>
+                    <TableHead className="text-right">Hebrew name</TableHead>
+                    <TableHead>English name</TableHead>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Status</TableHead>
+	                    <TableHead className="w-24 text-right">Actions</TableHead>
                   </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {visibleStudents.map((student, index) => {
+                    const key = studentKey(student);
+                    return (
+                      <TableRow key={key}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell
+                          className="text-right font-medium text-slate-950"
+                          dir="rtl"
+                        >
+                          {student.hebrewName}
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-950">
+                          {student.englishName}
+                        </TableCell>
+                        <TableCell>{student.studentId}</TableCell>
+                        <TableCell>
+                          {student.email ? (
+                            <a
+                              href={`mailto:${student.email}`}
+                              className="inline-flex items-center gap-2 text-blue-700 hover:text-blue-900"
+                            >
+                              <Mail className="size-4" />
+                              {student.email}
+                            </a>
+                          ) : (
+                            <span className="text-slate-400">No email</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              className={statusStyles[student.status]}
+                              variant="outline"
+                            >
+                              <ShieldCheck className="size-3" />
+                              {student.status}
+                            </Badge>
+                            <select
+                              value={student.status}
+                              onChange={(event) =>
+                                updateStatusMutation.mutate({
+                                  id: key,
+                                  status: event.target.value as StudentStatus,
+                                })
+                              }
+                              className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-700 shadow-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                              aria-label={`Update ${student.englishName} status`}
+                            >
+                              <option value="active">Active</option>
+                              <option value="pending">Pending</option>
+                              <option value="graduated">Graduated</option>
+                            </select>
+                          </div>
+                        </TableCell>
+	                        <TableCell className="text-right">
+	                          <div className="flex justify-end gap-1">
+	                            <Button
+	                              type="button"
+	                              variant="ghost"
+	                              size="icon"
+	                              onClick={() => openEditDialog(student)}
+	                              aria-label={`Edit ${student.englishName}`}
+	                            >
+	                              <Pencil className="size-4 text-blue-700" />
+	                            </Button>
+	                            <Button
+	                              type="button"
+	                              variant="ghost"
+	                              size="icon"
+	                              onClick={() => deleteMutation.mutate(key)}
+	                              aria-label={`Delete ${student.englishName}`}
+	                            >
+	                              <Trash2 className="size-4 text-red-600" />
+	                            </Button>
+	                          </div>
+	                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {visibleStudents.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="h-32 text-center text-slate-500"
+                      >
+                        No students match your search.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </section>
 
-        {isAddModalOpen ? (
+	        {isAddDialogOpen ? (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6"
             role="dialog"
@@ -581,17 +474,22 @@ export default function StudentsPage() {
             <div className="w-full max-w-md rounded-md border border-slate-200 bg-white shadow-xl">
               <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                 <div>
-                  <h2 id="add-student-title" className="text-lg font-semibold text-slate-950">
+                  <h2
+                    id="add-student-title"
+                    className="text-lg font-semibold text-slate-950"
+                  >
                     Add student
                   </h2>
-                  <p className="text-sm text-slate-500">Use the real registry fields.</p>
+                  <p className="text-sm text-slate-500">
+                    Use the real registry fields.
+                  </p>
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  onClick={closeAddModal}
-                  aria-label="Close add student modal"
+                  onClick={closeAddDialog}
+                  aria-label="Close add student dialog"
                 >
                   <X className="size-4" />
                 </Button>
@@ -641,13 +539,19 @@ export default function StudentsPage() {
                   />
                 </label>
 
-                {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
+                {error ? (
+                  <p className="text-sm font-medium text-red-600">{error}</p>
+                ) : null}
 
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button type="button" variant="outline" onClick={closeAddModal}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={closeAddDialog}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit">
+                  <Button type="submit" disabled={createMutation.isPending}>
                     <Plus className="size-4" />
                     Add student
                   </Button>
@@ -657,57 +561,113 @@ export default function StudentsPage() {
           </div>
         ) : null}
 
-        {editingEmailStudent ? (
+        {editingStudent ? (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="edit-email-title"
+            aria-labelledby="edit-student-title"
           >
             <div className="w-full max-w-md rounded-md border border-slate-200 bg-white shadow-xl">
               <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                 <div>
-                  <h2 id="edit-email-title" className="text-lg font-semibold text-slate-950">
-                    Edit email
+                  <h2
+                    id="edit-student-title"
+                    className="text-lg font-semibold text-slate-950"
+                  >
+                    Edit student
                   </h2>
                   <p className="text-sm text-slate-500">
-                    {editingEmailStudent.englishName}
+                    {editingStudent.englishName}
                   </p>
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  onClick={closeEditEmailModal}
-                  aria-label="Close edit email modal"
+                  onClick={closeEditDialog}
+                  aria-label="Close edit student dialog"
                 >
                   <X className="size-4" />
                 </Button>
               </div>
 
-              <form onSubmit={handleEmailUpdate} className="space-y-4 p-5">
+              <form onSubmit={handleEditSubmit} className="space-y-4 p-5">
+                <label className="block text-sm font-medium text-slate-700">
+                  Hebrew name
+                  <Input
+                    value={editHebrewName}
+                    onChange={(event) => setEditHebrewName(event.target.value)}
+                    className="mt-1 text-right"
+                    dir="rtl"
+                    placeholder="Hebrew name"
+                  />
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  English name
+                  <Input
+                    value={editEnglishName}
+                    onChange={(event) => setEditEnglishName(event.target.value)}
+                    className="mt-1"
+                    placeholder="Guy Peres"
+                  />
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  ID
+                  <Input
+                    value={editStudentId}
+                    onChange={(event) => setEditStudentId(event.target.value)}
+                    className="mt-1"
+                    inputMode="numeric"
+                    placeholder="326077229"
+                  />
+                </label>
+
                 <label className="block text-sm font-medium text-slate-700">
                   Email
                   <Input
-                    value={editingEmail}
-                    onChange={(event) => setEditingEmail(event.target.value)}
+                    value={editEmail}
+                    onChange={(event) => setEditEmail(event.target.value)}
                     className="mt-1"
                     placeholder="student@example.com"
                     type="email"
                   />
                 </label>
 
-                {emailError ? (
-                  <p className="text-sm font-medium text-red-600">{emailError}</p>
+                <label className="block text-sm font-medium text-slate-700">
+                  Status
+                  <select
+                    value={editStatus}
+                    onChange={(event) =>
+                      setEditStatus(event.target.value as StudentStatus)
+                    }
+                    className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="graduated">Graduated</option>
+                  </select>
+                </label>
+
+                {editError ? (
+                  <p className="text-sm font-medium text-red-600">
+                    {editError}
+                  </p>
                 ) : null}
 
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button type="button" variant="outline" onClick={closeEditEmailModal}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={closeEditDialog}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    <Mail className="size-4" />
-                    Save email
+                  <Button type="submit" disabled={updateStudentMutation.isPending}>
+                    <Pencil className="size-4" />
+                    Save changes
                   </Button>
                 </div>
               </form>

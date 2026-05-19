@@ -6,32 +6,28 @@ import { linkUserToStudentByEmail, normalizeEmail } from "../services/studentLin
 
 class UsersController {
     async createUser(req: Request, res: Response) {
-        try {
-            const { 
-                firstName, 
-                email, 
-                auth0Id,
-                lastName,
-                phone,
-                profilePicture
-            } = createUserSchema.parse(req.body);
-            
-            const user = await User.create({
-                firstName,
-                email: normalizeEmail(email),
-                auth0Id,
-                lastName,
-                phone,
-                profilePicture,
-            });
-            const linkedUser = await linkUserToStudentByEmail(user);
-            res.status(201).json({
-                success: true,
-                data: linkedUser
-            });
-        } catch (error) {
-            throw error; // Let the error handler middleware handle it
-        }
+        const { 
+            firstName, 
+            email, 
+            auth0Id,
+            lastName,
+            phone,
+            profilePicture
+        } = createUserSchema.parse(req.body);
+        
+        const user = await User.create({
+            firstName,
+            email: normalizeEmail(email),
+            auth0Id,
+            lastName,
+            phone,
+            profilePicture,
+        });
+        const linkedUser = await linkUserToStudentByEmail(user);
+        res.status(201).json({
+            success: true,
+            data: linkedUser
+        });
     }
 
     async getUsers(_req: Request, res: Response) {
@@ -66,32 +62,28 @@ class UsersController {
     }
 
     async updateUser(req: Request, res: Response) {
-        try {
-            const { id } = req.params;
-            const updateData = updateUserSchema.parse(req.body);
+        const { id } = req.params;
+        const updateData = updateUserSchema.parse(req.body);
 
-            // Check if at least one field is provided for update
-            if (Object.keys(updateData).length === 0) {
-                throw new AppError('At least one field must be provided for update', 400);
-            }
-
-            const user = await User.findByIdAndUpdate(
-                id, 
-                updateData, 
-                { new: true, runValidators: true }
-            );
-
-            if (!user) {
-                throw new AppError('User not found', 404);
-            }
-
-            res.status(200).json({
-                success: true,
-                data: user
-            });
-        } catch (error) {
-            throw error; // Let the error handler middleware handle it
+        // Check if at least one field is provided for update
+        if (Object.keys(updateData).length === 0) {
+            throw new AppError('At least one field must be provided for update', 400);
         }
+
+        const user = await User.findByIdAndUpdate(
+            id, 
+            updateData, 
+            { new: true, runValidators: true }
+        );
+
+        if (!user) {
+            throw new AppError('User not found', 404);
+        }
+
+        res.status(200).json({
+            success: true,
+            data: user
+        });
     }
 
     async deleteUser(req: Request, res: Response) {
