@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import User from "../models/userModel";
 import { AppError } from "@/utils/errorHandler";
+import { linkUserToStudentByEmail } from "../services/studentLinkingService.js";
 
 class AuthController {
     async getCurrentUser(req: Request, res: Response) {
@@ -17,10 +18,12 @@ class AuthController {
         if (!user) {
             throw new AppError('User not found', 404);
         }
+
+        const linkedUser = await linkUserToStudentByEmail(user);
         
         res.status(200).json({
             success: true,
-            data: user
+            data: linkedUser
         });
     }
 

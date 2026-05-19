@@ -8,13 +8,16 @@ const userSchema = new Schema<IUserDoc>({
     profilePicture: { type: String, required: false },
     auth0Id: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    role: { 
-        type: String, 
-        enum: ['admin', 'user'], 
-        required: true, 
-        default: 'user' 
+    role: {
+        type: String,
+        enum: ['admin', 'user', 'staff', 'student'],
+        required: true,
+        default: 'user'
     },
-}, { 
+    student: { type: Schema.Types.ObjectId, ref: "Student", required: false },
+    // Not selected by default — sensitive credential, only loaded explicitly.
+    googleRefreshToken: { type: String, required: false, select: false },
+}, {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }   

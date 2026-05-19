@@ -1,4 +1,5 @@
 import { useAuth0 } from "@auth0/auth0-react";
+import { Link } from "react-router";
 import { 
   Shield, 
   Palette, 
@@ -140,9 +141,12 @@ export default function HomePage() {
               <Button 
                 size="lg"
                 className="text-lg px-8 py-6"
+                asChild
               >
-                Explore Dashboard
-                <Icon icon={ArrowRight} size="md" className="ml-2" />
+                <Link to="/google-forms">
+                  Open Google Forms
+                  <Icon icon={ArrowRight} size="md" className="ml-2" />
+                </Link>
               </Button>
             )}
             <Button 
@@ -263,9 +267,12 @@ export default function HomePage() {
                 size="lg"
                 variant="secondary"
                 className="text-lg px-8 py-6 bg-white text-blue-600 hover:bg-gray-100"
+                asChild
               >
-                Go to Dashboard
-                <Icon icon={ArrowRight} size="md" className="ml-2" />
+                <Link to="/google-forms">
+                  Open Google Forms
+                  <Icon icon={ArrowRight} size="md" className="ml-2" />
+                </Link>
               </Button>
             )}
             <Button 

@@ -8,7 +8,11 @@ export interface IUser  {
     auth0Id: string;
     email: string;
     role: 'admin' | 'user' | 'staff' | 'student';
+    student?: Types.ObjectId;
     enrolledCourses?: Types.ObjectId[];
+    // OAuth2 refresh token for the admin's linked Google account
+    // (Forms/Drive read access). Set via the /api/google/oauth flow.
+    googleRefreshToken?: string;
 }
 
 export interface IUserDoc extends IUser, Document {

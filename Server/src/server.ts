@@ -13,6 +13,8 @@ import { errorHandler } from "./utils/errorHandler.js";
 import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import dangerRoutes from "./routes/dangerRoutes.js";
+import googleFormsRoutes from "./routes/googleFormsRoutes.js";
+import studentRoutes from "./routes/studentRoutes.js";
 
 // Config Middleware
 dotenv.config();
@@ -60,6 +62,8 @@ app.get("/health", (req, res) => {
 
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/students", studentRoutes);
+app.use("/api/google", googleFormsRoutes);
 app.use("/danger", dangerRoutes);
 
 // Error handling middleware (must be last)

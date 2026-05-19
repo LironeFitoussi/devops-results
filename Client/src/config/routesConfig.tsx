@@ -1,16 +1,11 @@
 import type { ComponentType, ReactNode } from "react";
-import { Home, User, LayoutDashboard, Settings } from "lucide-react";
+import { FileText, GraduationCap, Home } from "lucide-react";
 import type { SVGProps } from "react";
 import HomePage, { HomePageLoader } from "../pages/HomePage";
-import ProfilePage from "../pages/ProfilePage";
-import ProfileSettingsPage from "../pages/ProfileSettingsPage";
-import ProfilePreferencesPage from "../pages/ProfilePreferencesPage";
-import DashboardPage from "../pages/DashboardPage";
-import DashboardAnalyticsPage from "../pages/DashboardAnalyticsPage";
-import DashboardReportsPage from "../pages/DashboardReportsPage";
-import GeneralSettingsPage from "../pages/GeneralSettingsPage";
-import SecuritySettingsPage from "../pages/SecuritySettingsPage";
-import NotificationsSettingsPage from "../pages/NotificationsSettingsPage";
+import GoogleFormsPage from "../pages/GoogleFormsPage";
+import GoogleFormResultsPage from "../pages/GoogleFormResultsPage";
+import StudentsPage from "../pages/StudentsPage";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 // Type for Lucide icons
 export type LucideIcon = ComponentType<SVGProps<SVGSVGElement>>;
@@ -49,98 +44,63 @@ export const routeConfig: RouteConfig[] = [
     index: true,
   },
   {
-    path: "/profile",
-    name: "Profile",
-    icon: User,
+    path: "/google-forms",
+    name: "Google Forms",
+    Component: GoogleFormsPage,
+    icon: FileText,
     showInSidebar: true,
     requireAuth: true,
-    children: [
-      {
-        path: "/profile",
-        name: "View Profile",
-        Component: ProfilePage,
-        showInSidebar: true,
-        index: true,
-      },
-      {
-        path: "settings",
-        name: "Settings",
-        Component: ProfileSettingsPage,
-        showInSidebar: true,
-      },
-      {
-        path: "preferences",
-        name: "Preferences",
-        Component: ProfilePreferencesPage,
-        showInSidebar: true,
-      },
-    ],
+    requiredRole: "admin",
   },
   {
-    path: "/dashboard",
-    name: "Dashboard",
-    icon: LayoutDashboard,
+    path: "/students",
+    name: "Students",
+    Component: StudentsPage,
+    icon: GraduationCap,
     showInSidebar: true,
     requireAuth: true,
-    children: [
-      {
-        path: "/dashboard",
-        name: "Overview",
-        Component: DashboardPage,
-        showInSidebar: true,
-        index: true,
-      },
-      {
-        path: "analytics",
-        name: "Analytics",
-        Component: DashboardAnalyticsPage,
-        showInSidebar: true,
-      },
-      {
-        path: "reports",
-        name: "Reports",
-        Component: DashboardReportsPage,
-        showInSidebar: true,
-      },
-    ],
+    requiredRole: "admin",
   },
   {
-    path: "/settings",
-    name: "Settings",
-    icon: Settings,
-    showInSidebar: true,
+    path: "/google-forms/:formId",
+    name: "Google Form Results",
+    Component: GoogleFormResultsPage,
+    showInSidebar: false,
     requireAuth: true,
-    children: [
-      {
-        path: "general",
-        name: "General",
-        Component: GeneralSettingsPage,
-        showInSidebar: true,
-      },
-      {
-        path: "security",
-        name: "Security",
-        Component: SecuritySettingsPage,
-        showInSidebar: true,
-      },
-      {
-        path: "notifications",
-        name: "Notifications",
-        Component: NotificationsSettingsPage,
-        showInSidebar: true,
-      },
-    ],
+    requiredRole: "admin",
   },
 ];
+
+function getRouteComponent(route: RouteConfig): ComponentType | undefined {
+  if (!route.Component) {
+    return undefined;
+  }
+
+  if (!route.requireAuth && !route.requiredRole) {
+    return route.Component;
+  }
+
+  const RouteComponent = route.Component;
+
+  return function ProtectedRouteComponent() {
+    return (
+      <ProtectedRoute requiredRole={route.requiredRole}>
+        <RouteComponent />
+      </ProtectedRoute>
+    );
+  };
+}
 
 // Convert route config to React Router format
 export function convertToRouterRoutes(config: RouteConfig[]): RouteObject[] {
   return config.map((route) => {
+    const Component = getRouteComponent(route);
+
     // Handle index routes - they shouldn't have a path
     if (route.index) {
       return {
         index: true as const,
-        Component: route.Component,
+        Component,
         loader: route.loader,
         children: route.children && route.children.length > 0 
           ? convertToRouterRoutes(route.children) 
@@ -150,7 +110,7 @@ export function convertToRouterRoutes(config: RouteConfig[]): RouteObject[] {
 
     return {
       path: route.path,
-      Component: route.Component,
+      Component,
       loader: route.loader,
       children: route.children && route.children.length > 0 
         ? convertToRouterRoutes(route.children) 

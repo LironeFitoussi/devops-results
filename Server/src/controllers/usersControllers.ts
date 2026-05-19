@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import User from "../models/userModel";
 import { createUserSchema, updateUserSchema } from "../zod/usersZod.js";
 import { AppError } from "../utils/errorHandler.js";
+import { linkUserToStudentByEmail, normalizeEmail } from "../services/studentLinkingService.js";
 
 class UsersController {
     async createUser(req: Request, res: Response) {
@@ -15,10 +16,18 @@ class UsersController {
                 profilePicture
             } = createUserSchema.parse(req.body);
             
-            const user = await User.create({ firstName, email, auth0Id, lastName, phone, profilePicture });
+            const user = await User.create({
+                firstName,
+                email: normalizeEmail(email),
+                auth0Id,
+                lastName,
+                phone,
+                profilePicture,
+            });
+            const linkedUser = await linkUserToStudentByEmail(user);
             res.status(201).json({
                 success: true,
-                data: user
+                data: linkedUser
             });
         } catch (error) {
             throw error; // Let the error handler middleware handle it
