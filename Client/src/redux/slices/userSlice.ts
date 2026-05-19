@@ -27,32 +27,48 @@ export const fetchUser = createAsyncThunk(
       return response.data;
     } catch (error: unknown) {
       const axiosError = error as AxiosError<{ error?: string; message?: string }>;
-    //   console.log(axiosError?.response?.data?.error);
       if (axiosError?.response?.data?.error === 'User not found') {
        try {
-        const {userData} = payload;
-         // create user
-         await createUser({
-            email: userData.email,
-            email_verified: userData.email_verified,
-            lastName: userData.family_name,
-            firstName: userData.given_name,
-            name: userData.name,
-            nickname: userData.nickname,
-            picture: userData.picture,
-            auth0Id: userData.sub,
-            profilePicture: userData.picture,
-         });
-         
-         // refetch user after creation to get complete user data
-         const fetchResponse = await getCurrentUser(userData.email);
+        const { userData } = payload;
 
-         return fetchResponse.data;
-       } catch (error) {
-        return rejectWithValue(error as string);
+        // Auth0 may not provide given_name/family_name (email signup, some socials).
+        // Derive a sensible firstName/lastName so the server's zod min(1) passes.
+        const fullName = (userData.name || userData.nickname || userData.email || '').trim();
+        const nameParts = fullName.split(/\s+/).filter(Boolean);
+        const firstName =
+          userData.given_name || nameParts[0] || userData.email?.split('@')[0] || 'User';
+        const lastName =
+          userData.family_name || nameParts.slice(1).join(' ') || firstName;
+
+        // create user — only send fields the server's createUserSchema accepts
+        await createUser({
+          email: userData.email,
+          firstName,
+          lastName,
+          auth0Id: userData.sub,
+          profilePicture: userData.picture,
+        });
+
+        // refetch user after creation using the JWT (not the email)
+        const fetchResponse = await getCurrentUser(payload.token!);
+
+        return fetchResponse.data;
+       } catch (createError: unknown) {
+        const ce = createError as AxiosError<{ error?: string; message?: string }>;
+        return rejectWithValue(
+          ce?.response?.data?.error ||
+          ce?.response?.data?.message ||
+          ce?.message ||
+          'Failed to create user'
+        );
        }
       }
-      return rejectWithValue(axiosError?.response?.data?.message || 'Failed to fetch user');
+      return rejectWithValue(
+        axiosError?.response?.data?.error ||
+        axiosError?.response?.data?.message ||
+        axiosError?.message ||
+        'Failed to fetch user'
+      );
     }
   }
 );

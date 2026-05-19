@@ -72,10 +72,18 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
           <h2 className="text-xl font-semibold text-gray-800 mb-2">Failed to load user</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
-            onClick={() => {
+            onClick={async () => {
               if (user) {
+                const token = await getAccessTokenSilently({
+                  authorizationParams: {
+                    audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+                    scope: 'openid profile email',
+                  },
+                });
+                api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
                 dispatch(fetchUser({
                   userData: user as Auth0User,
+                  token,
                 }));
               }
             }}
