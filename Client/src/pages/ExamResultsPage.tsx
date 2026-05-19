@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth0 } from "@auth0/auth0-react";
 import { ArrowLeft, ClipboardList } from "lucide-react";
@@ -55,6 +55,7 @@ function identityLabel(identity: {
 export default function ExamResultsPage() {
   const { examId = "" } = useParams();
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const navigate = useNavigate();
 
   const getToken = useCallback(
     () =>
@@ -139,17 +140,24 @@ export default function ExamResultsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row._id ?? row.googleResponseId}>
-                    <TableCell>
-                      <div className="font-medium">{row.student.englishName}</div>
-                      <div className="text-sm text-gray-500">{row.student.hebrewName}</div>
-                    </TableCell>
-                    <TableCell>{identityLabel(row.extractedIdentity)}</TableCell>
-                    <TableCell>{scoreLabel(row.score, row.maxScore)}</TableCell>
-                    <TableCell>{Math.round(row.matchConfidence * 100)}%</TableCell>
-                  </TableRow>
-                ))}
+                {rows.map((row) => {
+                  const rowId = row._id ?? row.id ?? row.googleResponseId;
+                  return (
+                    <TableRow
+                      className="cursor-pointer hover:bg-blue-50"
+                      key={rowId}
+                      onClick={() => navigate(`/exams/${examId}/review/${rowId}`)}
+                    >
+                      <TableCell>
+                        <div className="font-medium">{row.student.englishName}</div>
+                        <div className="text-sm text-gray-500">{row.student.hebrewName}</div>
+                      </TableCell>
+                      <TableCell>{identityLabel(row.extractedIdentity)}</TableCell>
+                      <TableCell>{scoreLabel(row.score, row.maxScore)}</TableCell>
+                      <TableCell>{Math.round(row.matchConfidence * 100)}%</TableCell>
+                    </TableRow>
+                  );
+                })}
                 {rows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4}>

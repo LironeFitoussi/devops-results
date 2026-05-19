@@ -6,6 +6,9 @@ import GoogleFormsPage from "../pages/GoogleFormsPage";
 import GoogleFormResultsPage from "../pages/GoogleFormResultsPage";
 import ExamsPage from "../pages/ExamsPage";
 import ExamResultsPage from "../pages/ExamResultsPage";
+import ExamSubmissionReviewPage from "../pages/ExamSubmissionReviewPage";
+import StudentExamsPage from "../pages/StudentExamsPage";
+import StudentExamReviewPage from "../pages/StudentExamReviewPage";
 import StudentsPage from "../pages/StudentsPage";
 import StudentDashboardPage from "../pages/StudentDashboardPage";
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -56,6 +59,15 @@ export const routeConfig: RouteConfig[] = [
     requiredRole: "student",
   },
   {
+    path: "/student-exams",
+    name: "My Exams",
+    Component: StudentExamsPage,
+    icon: ClipboardList,
+    showInSidebar: true,
+    requireAuth: true,
+    requiredRole: "student",
+  },
+  {
     path: "/google-forms",
     name: "Google Forms",
     Component: GoogleFormsPage,
@@ -97,6 +109,22 @@ export const routeConfig: RouteConfig[] = [
     showInSidebar: false,
     requireAuth: true,
     requiredRole: "admin",
+  },
+  {
+    path: "/exams/:examId/review/:resultId",
+    name: "Submission Review",
+    Component: ExamSubmissionReviewPage,
+    showInSidebar: false,
+    requireAuth: true,
+    requiredRole: "admin",
+  },
+  {
+    path: "/student-exams/:resultId",
+    name: "Exam Review",
+    Component: StudentExamReviewPage,
+    showInSidebar: false,
+    requireAuth: true,
+    requiredRole: "student",
   },
 ];
 
