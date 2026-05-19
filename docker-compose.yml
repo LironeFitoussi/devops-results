@@ -1,0 +1,3 @@
+include:
+  - ./Server/compose.yml
+  - ./Client/compose.yml

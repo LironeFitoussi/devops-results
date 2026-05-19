@@ -1,0 +1,30 @@
+{
+  "name": "mern-ts-template",
+  "version": "1.0.0",
+  "description": "MERN Stack TypeScript Template with Auth0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "boot": "node scripts/boot.js",
+    "dev": "node scripts/check-docker.js && docker compose watch",
+    "dev:detached": "node scripts/check-docker.js && docker compose up -d --build",
+    "stop": "docker compose down",
+    "logs": "docker compose logs -f",
+    "reset": "docker compose down -v",
+    "build": "node scripts/build.js",
+    "install:all": "npm install --prefix Server && npm install --prefix Client",
+    "test": "npm run test --prefix Server && npm run test --prefix Client",
+    "lint": "npm run lint --prefix Server && npm run lint --prefix Client",
+    "docker:ps": "docker compose ps",
+    "docker:stats": "docker compose stats --no-stream",
+    "docker:rebuild": "docker compose down -v && docker compose up -d --build",
+    "docker:shell:server": "docker compose exec server sh",
+    "docker:shell:client": "docker compose exec client sh",
+    "docker:logs:server": "docker compose logs -f server",
+    "docker:logs:client": "docker compose logs -f client"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
+
