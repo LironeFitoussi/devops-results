@@ -114,7 +114,10 @@ export default function ExamResultsPage() {
   }, [resultsQuery.isError, resultsQuery.error]);
 
   const exam = resultsQuery.data?.exam;
-  const rows = resultsQuery.data?.results ?? [];
+  const rows = useMemo(
+    () => resultsQuery.data?.results ?? [],
+    [resultsQuery.data?.results],
+  );
   const average = useMemo(() => {
     const scores = rows
       .map((row) => row.score)

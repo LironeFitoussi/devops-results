@@ -114,8 +114,8 @@ export default function StudentExamsPage() {
     assignedQuery.error,
   ]);
 
-  const results = resultsQuery.data ?? [];
-  const assigned = assignedQuery.data ?? [];
+  const results = useMemo(() => resultsQuery.data ?? [], [resultsQuery.data]);
+  const assigned = useMemo(() => assignedQuery.data ?? [], [assignedQuery.data]);
   const average = useMemo(() => {
     const scores = results
       .map((result) => result.score)

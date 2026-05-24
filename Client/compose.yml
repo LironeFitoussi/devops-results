@@ -3,13 +3,14 @@ services:
     build:
       context: .
       target: development
-    container_name: mern-client
+    image: devops-exams-react
+    container_name: devops-exams-client
     restart: unless-stopped
     env_file: .env
     ports:
       - "5173:5173"
     networks:
-      - mern-network
+      - devops-exams-net
     depends_on:
       - server
     develop:

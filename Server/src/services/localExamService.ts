@@ -83,13 +83,16 @@ function redactExam(exam: ILocalExamDoc) {
     const plain = exam.toObject();
     return {
         ...plain,
-        questions: plain.questions.map((question: ILocalExamQuestion) => {
-            const { correctText: _correctText, options, ...safeQuestion } = question;
-            return {
-                ...safeQuestion,
-                options: options?.map(({ isCorrect: _isCorrect, ...option }) => option),
-            };
-        }),
+        questions: plain.questions.map((question: ILocalExamQuestion) => ({
+            id: question.id,
+            type: question.type,
+            prompt: question.prompt,
+            points: question.points,
+            options: question.options?.map((option) => ({
+                id: option.id,
+                label: option.label,
+            })),
+        })),
     };
 }
 

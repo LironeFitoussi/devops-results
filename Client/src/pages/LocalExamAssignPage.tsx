@@ -101,7 +101,7 @@ export default function LocalExamAssignPage() {
     onError: (error) => toast.error(`Assign failed: ${errMessage(error)}`),
   });
 
-  const students = studentsQuery.data ?? [];
+  const students = useMemo(() => studentsQuery.data ?? [], [studentsQuery.data]);
   const filteredStudents = useMemo(() => {
     const term = query.trim().toLowerCase();
     return students
