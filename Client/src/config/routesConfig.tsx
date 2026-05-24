@@ -13,6 +13,7 @@ import ExamSubmissionReviewPage from "../pages/ExamSubmissionReviewPage";
 import CodeReviewCreatePage from "../pages/CodeReviewCreatePage";
 import LocalExamAssignPage from "../pages/LocalExamAssignPage";
 import LocalExamCreatePage from "../pages/LocalExamCreatePage";
+import LocalExamEditPage from "../pages/LocalExamEditPage";
 import LocalExamTakePage from "../pages/LocalExamTakePage";
 import StudentExamsPage from "../pages/StudentExamsPage";
 import StudentExamReviewPage from "../pages/StudentExamReviewPage";
@@ -142,6 +143,14 @@ export const routeConfig: RouteConfig[] = [
     path: "/exams/local/:examId/assign",
     name: "Assign Local Exam",
     Component: LocalExamAssignPage,
+    showInSidebar: false,
+    requireAuth: true,
+    requiredRole: "admin",
+  },
+  {
+    path: "/exams/local/:examId/edit",
+    name: "Edit Local Exam",
+    Component: LocalExamEditPage,
     showInSidebar: false,
     requireAuth: true,
     requiredRole: "admin",

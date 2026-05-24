@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth0 } from "@auth0/auth0-react";
 import { AxiosError } from "axios";
 import toast from "react-hot-toast";
-import { ClipboardList, ExternalLink, Plus, Trash2, Users } from "lucide-react";
+import { ClipboardList, ExternalLink, Pencil, Plus, Trash2, Users } from "lucide-react";
 
 import { Heading } from "@/components/Atoms/Heading";
 import { Icon } from "@/components/Atoms/Icon";
@@ -195,6 +195,14 @@ export default function ExamsPage() {
                     <TableCell>{maxScoreLabel(exam)}</TableCell>
                     <TableCell>{formatDate(exam.updatedAt)}</TableCell>
                     <TableCell className="space-x-2 text-right">
+                      {exam.type === "local" && exam.status === "draft" ? (
+                        <Button variant="ghost" size="sm" asChild disabled={!id}>
+                          <Link to={`/exams/local/${id}/edit`}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </Link>
+                        </Button>
+                      ) : null}
                       {exam.type === "local" ? (
                         <Button variant="ghost" size="sm" asChild disabled={!id}>
                           <Link to={`/exams/local/${id}/assign`}>
