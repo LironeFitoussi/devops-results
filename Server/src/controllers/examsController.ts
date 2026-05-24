@@ -10,10 +10,27 @@ import {
 } from "../services/examImportService.js";
 import { createCodeReviewExam } from "../services/codeReviewExamService.js";
 import {
+    assignStudentsToLocalExam,
+    closeLocalExam,
+    createLocalExam,
+    getAssignedLocalExams,
+    gradeLocalExamResult,
+    publishLocalExam,
+    startOrGetLocalExam,
+    submitLocalExam,
+    updateLocalExam,
+} from "../services/localExamService.js";
+import {
+    assignStudentsSchema,
     createCodeReviewExamSchema,
+    createLocalExamSchema,
     examIdParamSchema,
+    gradeLocalExamResultSchema,
     googleFormIdParamSchema,
     importGoogleExamSchema,
+    resultIdParamSchema,
+    submitLocalExamSchema,
+    updateLocalExamSchema,
 } from "../zod/examsZod.js";
 import { AppError } from "../utils/errorHandler.js";
 
@@ -93,22 +110,75 @@ class ExamsController {
     }
 
     async createCodeReviewExam(req: Request, res: Response) {
-        const sub = req.auth?.payload?.sub;
-        if (!sub) {
-            throw new AppError("User information not found in token", 401);
-        }
-
+        const user = await this.getCurrentUser(req);
         const payload = createCodeReviewExamSchema.parse(req.body);
-        const user = await User.findByAuth0Id(sub);
-        if (!user) {
-            throw new AppError("User not found", 404);
-        }
-
         const result = await createCodeReviewExam(payload, user);
         res.status(201).json({ success: true, data: result });
     }
 
-    private async getLinkedStudentId(req: Request) {
+    async createLocalExam(req: Request, res: Response) {
+        const user = await this.getCurrentUser(req);
+        const payload = createLocalExamSchema.parse(req.body);
+        const result = await createLocalExam(payload, user);
+        res.status(201).json({ success: true, data: result });
+    }
+
+    async updateLocalExam(req: Request, res: Response) {
+        const { id } = examIdParamSchema.parse(req.params);
+        const payload = updateLocalExamSchema.parse(req.body);
+        const result = await updateLocalExam(id, payload);
+        res.status(200).json({ success: true, data: result });
+    }
+
+    async assignLocalExamStudents(req: Request, res: Response) {
+        const { id } = examIdParamSchema.parse(req.params);
+        const payload = assignStudentsSchema.parse(req.body);
+        const result = await assignStudentsToLocalExam(id, payload);
+        res.status(200).json({ success: true, data: result });
+    }
+
+    async publishLocalExam(req: Request, res: Response) {
+        const { id } = examIdParamSchema.parse(req.params);
+        const result = await publishLocalExam(id);
+        res.status(200).json({ success: true, data: result });
+    }
+
+    async closeLocalExam(req: Request, res: Response) {
+        const { id } = examIdParamSchema.parse(req.params);
+        const result = await closeLocalExam(id);
+        res.status(200).json({ success: true, data: result });
+    }
+
+    async getAssignedLocalExams(req: Request, res: Response) {
+        const student = await this.getLinkedStudentId(req);
+        const result = await getAssignedLocalExams(student);
+        res.status(200).json({ success: true, data: result });
+    }
+
+    async startLocalExam(req: Request, res: Response) {
+        const { id } = examIdParamSchema.parse(req.params);
+        const student = await this.getLinkedStudentId(req);
+        const result = await startOrGetLocalExam(id, student);
+        res.status(200).json({ success: true, data: result });
+    }
+
+    async submitLocalExam(req: Request, res: Response) {
+        const { id } = examIdParamSchema.parse(req.params);
+        const student = await this.getLinkedStudentId(req);
+        const payload = submitLocalExamSchema.parse(req.body);
+        const result = await submitLocalExam(id, student, payload);
+        res.status(200).json({ success: true, data: result });
+    }
+
+    async gradeLocalExamResult(req: Request, res: Response) {
+        const user = await this.getCurrentUser(req);
+        const { resultId } = resultIdParamSchema.parse(req.params);
+        const payload = gradeLocalExamResultSchema.parse(req.body);
+        const result = await gradeLocalExamResult(resultId, payload, user);
+        res.status(200).json({ success: true, data: result });
+    }
+
+    private async getCurrentUser(req: Request) {
         const sub = req.auth?.payload?.sub;
         if (!sub) {
             throw new AppError("User information not found in token", 401);
@@ -118,7 +188,11 @@ class ExamsController {
         if (!user) {
             throw new AppError("User not found", 404);
         }
+        return user;
+    }
 
+    private async getLinkedStudentId(req: Request) {
+        const user = await this.getCurrentUser(req);
         const linkedUser = await linkUserToStudentByEmail(user);
         if (!linkedUser.student) {
             throw new AppError("Student profile not found", 404);

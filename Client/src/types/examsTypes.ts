@@ -1,7 +1,31 @@
 import type { IStudent } from "./studentsTypes";
 import type { GoogleResponseAnswer } from "@/services/googleForms";
 
-export type ExamType = "google_form" | "code_review";
+export type ExamType = "google_form" | "code_review" | "local";
+
+export type LocalExamQuestionType =
+  | "single_choice"
+  | "multi_choice"
+  | "short_text"
+  | "long_text";
+
+export type LocalExamStatus = "draft" | "published" | "closed";
+export type LocalExamResultStatus = "in_progress" | "submitted" | "graded";
+
+export interface ILocalExamOption {
+  id: string;
+  label: string;
+  isCorrect?: boolean;
+}
+
+export interface ILocalExamQuestion {
+  id: string;
+  type: LocalExamQuestionType;
+  prompt: string;
+  points: number;
+  options?: ILocalExamOption[];
+  correctText?: string;
+}
 
 export type ExamIdentityMode = "firstLast" | "fullName";
 
@@ -39,7 +63,17 @@ export interface ICodeReviewExam extends IExamBase {
   type: "code_review";
 }
 
-export type IExam = IGoogleFormExam | ICodeReviewExam;
+export interface ILocalExam extends IExamBase {
+  type: "local";
+  questions: ILocalExamQuestion[];
+  totalPoints: number;
+  assignedStudents: string[] | IStudent[];
+  status: LocalExamStatus;
+  dueAt?: string;
+  createdBy?: string;
+}
+
+export type IExam = IGoogleFormExam | ICodeReviewExam | ILocalExam;
 
 export interface ExamStudentMatch {
   studentId: string;
@@ -105,7 +139,29 @@ export interface CodeReviewExamResult extends ExamResultBase {
   githubUrl?: string;
 }
 
-export type ExamResult = GoogleFormExamResult | CodeReviewExamResult;
+export interface LocalExamAnswer {
+  questionId: string;
+  selectedOptionIds?: string[];
+  textAnswer?: string;
+  isCorrect?: boolean;
+  awardedPoints?: number;
+  manualOverride?: boolean;
+}
+
+export interface LocalExamResult extends ExamResultBase {
+  type: "local";
+  student: IStudent;
+  answers: LocalExamAnswer[];
+  status: LocalExamResultStatus;
+  autoGradedScore: number;
+  manualOverrideScore?: number;
+  submittedAt?: string;
+}
+
+export type ExamResult =
+  | GoogleFormExamResult
+  | CodeReviewExamResult
+  | LocalExamResult;
 
 export interface ExamResultsResponse {
   exam: IExam;
@@ -122,4 +178,40 @@ export interface CreateCodeReviewExamInput {
   title: string;
   description?: string;
   results: CodeReviewResultRowInput[];
+}
+
+export interface CreateLocalExamInput {
+  title: string;
+  description?: string;
+  questions: ILocalExamQuestion[];
+  dueAt?: string;
+  status?: "draft" | "published";
+}
+
+export type UpdateLocalExamInput = Partial<CreateLocalExamInput>;
+
+export interface AssignedLocalExam {
+  exam: ILocalExam;
+  result: LocalExamResult | null;
+}
+
+export interface StartLocalExamResponse {
+  exam: ILocalExam;
+  result: LocalExamResult;
+}
+
+export interface SubmitLocalExamInput {
+  answers: Array<{
+    questionId: string;
+    selectedOptionIds?: string[];
+    textAnswer?: string;
+  }>;
+}
+
+export interface GradeLocalExamResultInput {
+  manualOverrideScore?: number;
+  answers?: Array<{
+    questionId: string;
+    awardedPoints: number;
+  }>;
 }

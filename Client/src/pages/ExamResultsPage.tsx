@@ -66,7 +66,22 @@ function rowStudents(row: ExamResult): IStudent[] {
 }
 
 function sourceLabel(exam: IExam): string | undefined {
-  return exam.type === "google_form" ? exam.googleFormId : undefined;
+  if (exam.type === "google_form") return exam.googleFormId;
+  if (exam.type === "local") return `${exam.questions.length} questions`;
+  return undefined;
+}
+
+function detailsLabel(row: ExamResult): string {
+  if (row.type === "google_form") return identityLabel(row.extractedIdentity);
+  if (row.type === "local") return row.status;
+  return row.githubUrl ?? "-";
+}
+
+function confidenceLabel(row: ExamResult): string {
+  if (row.type === "google_form") {
+    return `${Math.round(row.matchConfidence * 100)}%`;
+  }
+  return "-";
 }
 
 export default function ExamResultsPage() {
@@ -108,8 +123,7 @@ export default function ExamResultsPage() {
     return scores.reduce((total, score) => total + score, 0) / scores.length;
   }, [rows]);
 
-  const backTo =
-    exam?.type === "code_review" ? "/exams" : "/google-forms";
+  const backTo = exam?.type === "google_form" ? "/google-forms" : "/exams";
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-8">
@@ -180,17 +194,9 @@ export default function ExamResultsPage() {
                           {students.map((s) => s.hebrewName).join(", ")}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        {row.type === "google_form"
-                          ? identityLabel(row.extractedIdentity)
-                          : row.githubUrl ?? "—"}
-                      </TableCell>
+                      <TableCell>{detailsLabel(row)}</TableCell>
                       <TableCell>{scoreLabel(row.score, row.maxScore)}</TableCell>
-                      <TableCell>
-                        {row.type === "google_form"
-                          ? `${Math.round(row.matchConfidence * 100)}%`
-                          : "—"}
-                      </TableCell>
+                      <TableCell>{confidenceLabel(row)}</TableCell>
                     </TableRow>
                   );
                 })}

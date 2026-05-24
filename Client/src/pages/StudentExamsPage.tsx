@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth0 } from "@auth0/auth0-react";
 import { AxiosError } from "axios";
 import toast from "react-hot-toast";
-import { ClipboardList, ExternalLink } from "lucide-react";
+import { ClipboardList, ExternalLink, PlayCircle } from "lucide-react";
 
 import { Heading } from "@/components/Atoms/Heading";
 import { Icon } from "@/components/Atoms/Icon";
@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getMyExamResults } from "@/services/exams";
+import { getAssignedLocalExams, getMyExamResults } from "@/services/exams";
 import type { ExamResult, IExam } from "@/types";
 
 function errMessage(error: unknown): string {
@@ -49,15 +49,14 @@ function examTitle(exam: string | IExam): string {
 function examMaxScore(exam: string | IExam, fallback?: number): number | undefined {
   if (typeof exam === "string") return fallback;
   if (exam.type === "google_form") return exam.maxScore ?? fallback;
+  if (exam.type === "local") return exam.totalPoints ?? fallback;
   return fallback;
 }
 
 function typeBadge(result: ExamResult) {
-  return result.type === "google_form" ? (
-    <Badge variant="outline">Google Form</Badge>
-  ) : (
-    <Badge className="bg-purple-600 text-white">Code Review</Badge>
-  );
+  if (result.type === "google_form") return <Badge variant="outline">Google Form</Badge>;
+  if (result.type === "local") return <Badge className="bg-blue-600 text-white">Local</Badge>;
+  return <Badge className="bg-purple-600 text-white">Code Review</Badge>;
 }
 
 function scoreLabel(score?: number, points?: number): string {
@@ -94,13 +93,29 @@ export default function StudentExamsPage() {
     retry: false,
   });
 
+  const assignedQuery = useQuery({
+    queryKey: ["student-local-assigned"],
+    queryFn: async () => getAssignedLocalExams(await getToken()),
+    enabled: isAuthenticated,
+    retry: false,
+  });
+
   useEffect(() => {
     if (resultsQuery.isError) {
-      toast.error(`Exams: ${errMessage(resultsQuery.error)}`);
+      toast.error(`Results: ${errMessage(resultsQuery.error)}`);
     }
-  }, [resultsQuery.isError, resultsQuery.error]);
+    if (assignedQuery.isError) {
+      toast.error(`Assigned exams: ${errMessage(assignedQuery.error)}`);
+    }
+  }, [
+    resultsQuery.isError,
+    resultsQuery.error,
+    assignedQuery.isError,
+    assignedQuery.error,
+  ]);
 
   const results = resultsQuery.data ?? [];
+  const assigned = assignedQuery.data ?? [];
   const average = useMemo(() => {
     const scores = results
       .map((result) => result.score)
@@ -108,6 +123,9 @@ export default function StudentExamsPage() {
     if (scores.length === 0) return undefined;
     return scores.reduce((total, score) => total + score, 0) / scores.length;
   }, [results]);
+
+  const loading = resultsQuery.isLoading || assignedQuery.isLoading;
+  const failed = resultsQuery.isError || assignedQuery.isError;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-8">
@@ -120,81 +138,154 @@ export default function StudentExamsPage() {
             </Heading>
           </div>
           <Text color="muted" className="mt-2">
-            Your saved exam results and quick reviews.
+            Assigned local exams and saved results.
           </Text>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary">{results.length} exams</Badge>
+          <Badge variant="secondary">{results.length} results</Badge>
           <Badge variant="outline">
             Average {average === undefined ? "-" : average.toFixed(1)}
           </Badge>
         </div>
       </div>
 
-      {resultsQuery.isLoading ? (
+      {loading ? (
         <div className="flex justify-center py-16">
           <LoadingSpinner size="lg" />
         </div>
-      ) : resultsQuery.isError ? (
+      ) : failed ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4">
           <Text color="muted">Could not load your exams.</Text>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Exam</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Saved</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {results.map((result) => {
-                const id = resultKey(result);
-                return (
-                  <TableRow
-                    className={id ? "cursor-pointer hover:bg-blue-50" : undefined}
-                    key={id || fallbackKey(result)}
-                    onClick={() => {
-                      if (id) {
-                        navigate(`/student-exams/${id}`);
-                      }
-                    }}
-                  >
-                    <TableCell className="font-medium">
-                      {examTitle(result.exam)}
-                    </TableCell>
-                    <TableCell>{typeBadge(result)}</TableCell>
-                    <TableCell>
-                      {scoreLabel(result.score, examMaxScore(result.exam, result.maxScore))}
-                    </TableCell>
-                    <TableCell>{formatDate(result.confirmedAt)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" asChild disabled={!id}>
-                        <Link
-                          to={`/student-exams/${id}`}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Review
-                        </Link>
-                      </Button>
-                    </TableCell>
+        <div className="space-y-8">
+          <div>
+            <Heading level={2} className="mb-3 text-xl">
+              Pending Local Exams
+            </Heading>
+            <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Exam</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Due</TableHead>
+                    <TableHead />
                   </TableRow>
-                );
-              })}
-              {results.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5}>
-                    <Text color="muted">No exam results are available yet.</Text>
-                  </TableCell>
-                </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {assigned.map(({ exam, result }) => {
+                    const examId = exam._id ?? exam.id ?? "";
+                    const resultId = result?._id ?? result?.id;
+                    const done = result?.status === "submitted" || result?.status === "graded";
+                    return (
+                      <TableRow key={examId}>
+                        <TableCell>
+                          <div className="font-medium">{exam.title}</div>
+                          <div className="text-sm text-gray-500">
+                            {exam.questions.length} questions - {exam.totalPoints} points
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={done ? "secondary" : "outline"}>
+                            {result?.status ?? "not started"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatDate(exam.dueAt)}</TableCell>
+                        <TableCell className="text-right">
+                          {done && resultId ? (
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link to={`/student-exams/${resultId}`}>
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                Review
+                              </Link>
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link to={`/student-exams/take/${examId}`}>
+                                <PlayCircle className="mr-2 h-4 w-4" />
+                                {result?.status === "in_progress" ? "Resume" : "Start"}
+                              </Link>
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {assigned.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4}>
+                        <Text color="muted">No local exams are assigned right now.</Text>
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <div>
+            <Heading level={2} className="mb-3 text-xl">
+              Results
+            </Heading>
+            <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Exam</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Score</TableHead>
+                    <TableHead>Saved</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {results.map((result) => {
+                    const id = resultKey(result);
+                    return (
+                      <TableRow
+                        className={id ? "cursor-pointer hover:bg-blue-50" : undefined}
+                        key={id || fallbackKey(result)}
+                        onClick={() => {
+                          if (id) navigate(`/student-exams/${id}`);
+                        }}
+                      >
+                        <TableCell className="font-medium">
+                          {examTitle(result.exam)}
+                        </TableCell>
+                        <TableCell>{typeBadge(result)}</TableCell>
+                        <TableCell>
+                          {scoreLabel(
+                            result.score,
+                            examMaxScore(result.exam, result.maxScore),
+                          )}
+                        </TableCell>
+                        <TableCell>{formatDate(result.confirmedAt)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" asChild disabled={!id}>
+                            <Link
+                              to={`/student-exams/${id}`}
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              Review
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {results.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5}>
+                        <Text color="muted">No exam results are available yet.</Text>
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </div>
       )}
     </div>

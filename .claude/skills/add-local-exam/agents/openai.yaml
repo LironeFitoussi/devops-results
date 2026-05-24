@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add Local Exam"
+  short_description: "Generate MongoDB queries for local exams."
+  default_prompt: "Generate step-by-step MongoDB queries for a local exam from my description."
