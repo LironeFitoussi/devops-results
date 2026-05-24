@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "seed:students": "tsx scripts/seedStudents.ts"
+    "seed:students": "tsx scripts/seedStudents.ts",
+    "migrate:exam-types": "tsx scripts/migrate-exam-types.ts"
   },
   "keywords": [],
   "author": "",

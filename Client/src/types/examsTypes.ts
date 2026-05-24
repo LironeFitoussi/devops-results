@@ -1,6 +1,8 @@
 import type { IStudent } from "./studentsTypes";
 import type { GoogleResponseAnswer } from "@/services/googleForms";
 
+export type ExamType = "google_form" | "code_review";
+
 export type ExamIdentityMode = "firstLast" | "fullName";
 
 export type ExamIdentityConfig =
@@ -14,19 +16,30 @@ export type ExamIdentityConfig =
       fullNameQuestionId: string;
     };
 
-export interface IExam {
+export interface IExamBase {
   _id?: string;
   id?: string;
-  googleFormId: string;
+  type: ExamType;
   title: string;
-  documentTitle?: string;
   description?: string;
-  questionSnapshot: unknown[];
-  maxScore?: number;
-  identityConfig: ExamIdentityConfig;
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface IGoogleFormExam extends IExamBase {
+  type: "google_form";
+  googleFormId: string;
+  documentTitle?: string;
+  questionSnapshot: unknown[];
+  maxScore?: number;
+  identityConfig: ExamIdentityConfig;
+}
+
+export interface ICodeReviewExam extends IExamBase {
+  type: "code_review";
+}
+
+export type IExam = IGoogleFormExam | ICodeReviewExam;
 
 export interface ExamStudentMatch {
   studentId: string;
@@ -61,14 +74,20 @@ export interface ExamImportPreview {
   students: IStudent[];
 }
 
-export interface ExamResult {
+export interface ExamResultBase {
   _id?: string;
   id?: string;
+  type: ExamType;
   exam: string | IExam;
-  student: IStudent;
-  googleResponseId: string;
   score?: number;
   maxScore?: number;
+  confirmedAt: string;
+}
+
+export interface GoogleFormExamResult extends ExamResultBase {
+  type: "google_form";
+  student: IStudent;
+  googleResponseId: string;
   answersSnapshot: Record<string, GoogleResponseAnswer>;
   extractedIdentity: {
     firstName?: string;
@@ -77,10 +96,30 @@ export interface ExamResult {
     fallbackEvidence?: string[];
   };
   matchConfidence: number;
-  confirmedAt: string;
 }
+
+export interface CodeReviewExamResult extends ExamResultBase {
+  type: "code_review";
+  students: IStudent[];
+  reviewText: string;
+  githubUrl?: string;
+}
+
+export type ExamResult = GoogleFormExamResult | CodeReviewExamResult;
 
 export interface ExamResultsResponse {
   exam: IExam;
   results: ExamResult[];
+}
+
+export interface CodeReviewResultRowInput {
+  studentIds: string[];
+  reviewText: string;
+  githubUrl?: string;
+}
+
+export interface CreateCodeReviewExamInput {
+  title: string;
+  description?: string;
+  results: CodeReviewResultRowInput[];
 }

@@ -27,8 +27,14 @@ function errMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown error";
 }
 
-function examValue(exam: string | IExam): IExam | undefined {
-  return typeof exam === "string" ? undefined : exam;
+function examValue(exam: string | IExam | undefined): IExam | undefined {
+  if (!exam || typeof exam === "string") return undefined;
+  return exam;
+}
+
+function examMaxScore(exam?: IExam): number | undefined {
+  if (!exam) return undefined;
+  return exam.type === "google_form" ? exam.maxScore : undefined;
 }
 
 function scoreLabel(score?: number, points?: number): string {
@@ -66,7 +72,7 @@ export default function StudentExamReviewPage() {
     }
   }, [resultQuery.isError, resultQuery.error]);
 
-  const exam = examValue(resultQuery.data?.exam ?? "");
+  const exam = examValue(resultQuery.data?.exam);
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-8">
       <Button variant="ghost" size="sm" asChild className="mb-4">
@@ -99,14 +105,11 @@ export default function StudentExamReviewPage() {
               </Text>
             </div>
             <Badge variant="secondary">
-              {scoreLabel(resultQuery.data.score, resultQuery.data.maxScore ?? exam?.maxScore)}
+              {scoreLabel(resultQuery.data.score, resultQuery.data.maxScore ?? examMaxScore(exam))}
             </Badge>
           </div>
 
-          <ExamSubmissionReview
-            exam={exam}
-            answersSnapshot={resultQuery.data.answersSnapshot}
-          />
+          <ExamSubmissionReview exam={exam} result={resultQuery.data} />
         </>
       )}
     </div>

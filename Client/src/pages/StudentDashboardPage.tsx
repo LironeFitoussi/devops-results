@@ -184,7 +184,7 @@ export default function StudentDashboardPage() {
                 return (
                   <div
                     className="flex flex-col gap-3 rounded-md border border-slate-200 p-3 md:flex-row md:items-center md:justify-between"
-                    key={id || result.googleResponseId}
+                    key={id || (result.type === "google_form" ? result.googleResponseId : "")}
                   >
                     <div>
                       <p className="font-medium text-slate-950">

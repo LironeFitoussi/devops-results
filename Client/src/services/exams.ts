@@ -1,5 +1,6 @@
 import api from "./api";
 import type {
+  CreateCodeReviewExamInput,
   ExamIdentityConfig,
   ExamImportPreview,
   ExamResult,
@@ -82,6 +83,18 @@ export const getMyExamResult = async (
 ): Promise<ExamResult> => {
   const { data } = await api.get(
     `/exams/me/${encodeURIComponent(resultId)}`,
+    authConfig(token),
+  );
+  return data.data;
+};
+
+export const createCodeReviewExam = async (
+  token: string,
+  payload: CreateCodeReviewExamInput,
+): Promise<{ exam: IExam; results: ExamResult[] }> => {
+  const { data } = await api.post(
+    "/exams/code-review",
+    payload,
     authConfig(token),
   );
   return data.data;

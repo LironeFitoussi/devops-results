@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExamSubmissionReview } from "@/components/ExamSubmissionReview";
 import { getExamResults } from "@/services/exams";
+import type { ExamResult } from "@/types";
 
 function errMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -63,11 +64,18 @@ export default function ExamSubmissionReviewPage() {
 
   const result = useMemo(
     () =>
-      (resultsQuery.data?.results ?? []).find(
-        (row) => (row._id ?? row.id ?? row.googleResponseId) === resultId,
-      ),
+      (resultsQuery.data?.results ?? []).find((row) => {
+        const fallback =
+          row.type === "google_form" ? row.googleResponseId : "";
+        return (row._id ?? row.id ?? fallback) === resultId;
+      }),
     [resultId, resultsQuery.data?.results],
   );
+
+  const headerName = (row: ExamResult): string => {
+    if (row.type === "google_form") return row.student.englishName;
+    return row.students.map((s) => s.englishName).join(", ") || "Group";
+  };
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-8">
@@ -97,7 +105,7 @@ export default function ExamSubmissionReviewPage() {
               <div className="flex items-center gap-3">
                 <Icon icon={ClipboardList} size="lg" className="text-blue-600" />
                 <Heading level={1} className="text-3xl md:text-4xl">
-                  {result.student.englishName}
+                  {headerName(result)}
                 </Heading>
               </div>
               <Text color="muted" className="mt-2">
@@ -111,7 +119,7 @@ export default function ExamSubmissionReviewPage() {
 
           <ExamSubmissionReview
             exam={resultsQuery.data.exam}
-            answersSnapshot={result.answersSnapshot}
+            result={result}
           />
         </>
       )}

@@ -8,7 +8,9 @@ import {
     getUserWithGoogleToken,
     importConfirmedGoogleExam,
 } from "../services/examImportService.js";
+import { createCodeReviewExam } from "../services/codeReviewExamService.js";
 import {
+    createCodeReviewExamSchema,
     examIdParamSchema,
     googleFormIdParamSchema,
     importGoogleExamSchema,
@@ -35,14 +37,18 @@ class ExamsController {
         }
         const results = await ExamResult.find({ exam: id })
             .populate("student")
+            .populate("students")
             .sort({ score: -1, updatedAt: -1 });
         res.status(200).json({ success: true, data: { exam, results } });
     }
 
     async getMyExamResults(req: Request, res: Response) {
         const student = await this.getLinkedStudentId(req);
-        const results = await ExamResult.find({ student })
+        const results = await ExamResult.find({
+            $or: [{ student }, { students: student }],
+        })
             .populate("exam")
+            .populate("students")
             .sort({ updatedAt: -1 });
         res.status(200).json({ success: true, data: results });
     }
@@ -50,9 +56,13 @@ class ExamsController {
     async getMyExamResult(req: Request, res: Response) {
         const { id } = examIdParamSchema.parse(req.params);
         const student = await this.getLinkedStudentId(req);
-        const result = await ExamResult.findOne({ _id: id, student })
+        const result = await ExamResult.findOne({
+            _id: id,
+            $or: [{ student }, { students: student }],
+        })
             .populate("exam")
-            .populate("student");
+            .populate("student")
+            .populate("students");
         if (!result) {
             throw new AppError("Exam result not found", 404);
         }
@@ -79,6 +89,22 @@ class ExamsController {
             user,
         );
 
+        res.status(201).json({ success: true, data: result });
+    }
+
+    async createCodeReviewExam(req: Request, res: Response) {
+        const sub = req.auth?.payload?.sub;
+        if (!sub) {
+            throw new AppError("User information not found in token", 401);
+        }
+
+        const payload = createCodeReviewExamSchema.parse(req.body);
+        const user = await User.findByAuth0Id(sub);
+        if (!user) {
+            throw new AppError("User not found", 404);
+        }
+
+        const result = await createCodeReviewExam(payload, user);
         res.status(201).json({ success: true, data: result });
     }
 

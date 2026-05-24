@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getMyExamResults } from "@/services/exams";
-import type { IExam } from "@/types";
+import type { ExamResult, IExam } from "@/types";
 
 function errMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -38,12 +38,26 @@ function resultKey(result: { _id?: string; id?: string }): string {
   return result._id ?? result.id ?? "";
 }
 
+function fallbackKey(result: ExamResult): string {
+  return result.type === "google_form" ? result.googleResponseId : "";
+}
+
 function examTitle(exam: string | IExam): string {
   return typeof exam === "string" ? "Exam" : exam.title;
 }
 
 function examMaxScore(exam: string | IExam, fallback?: number): number | undefined {
-  return typeof exam === "string" ? fallback : exam.maxScore ?? fallback;
+  if (typeof exam === "string") return fallback;
+  if (exam.type === "google_form") return exam.maxScore ?? fallback;
+  return fallback;
+}
+
+function typeBadge(result: ExamResult) {
+  return result.type === "google_form" ? (
+    <Badge variant="outline">Google Form</Badge>
+  ) : (
+    <Badge className="bg-purple-600 text-white">Code Review</Badge>
+  );
 }
 
 function scoreLabel(score?: number, points?: number): string {
@@ -131,6 +145,7 @@ export default function StudentExamsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Exam</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Score</TableHead>
                 <TableHead>Saved</TableHead>
                 <TableHead />
@@ -142,7 +157,7 @@ export default function StudentExamsPage() {
                 return (
                   <TableRow
                     className={id ? "cursor-pointer hover:bg-blue-50" : undefined}
-                    key={id || result.googleResponseId}
+                    key={id || fallbackKey(result)}
                     onClick={() => {
                       if (id) {
                         navigate(`/student-exams/${id}`);
@@ -152,6 +167,7 @@ export default function StudentExamsPage() {
                     <TableCell className="font-medium">
                       {examTitle(result.exam)}
                     </TableCell>
+                    <TableCell>{typeBadge(result)}</TableCell>
                     <TableCell>
                       {scoreLabel(result.score, examMaxScore(result.exam, result.maxScore))}
                     </TableCell>
@@ -172,7 +188,7 @@ export default function StudentExamsPage() {
               })}
               {results.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4}>
+                  <TableCell colSpan={5}>
                     <Text color="muted">No exam results are available yet.</Text>
                   </TableCell>
                 </TableRow>

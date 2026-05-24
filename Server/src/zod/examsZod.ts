@@ -35,3 +35,15 @@ export const examIdParamSchema = z.object({
 export const googleFormIdParamSchema = z.object({
     formId: z.string().trim().min(1),
 });
+
+export const codeReviewResultRowSchema = z.object({
+    studentIds: z.array(z.string().trim().min(1)).min(1),
+    reviewText: z.string().trim().min(1),
+    githubUrl: z.string().trim().url().optional(),
+});
+
+export const createCodeReviewExamSchema = z.object({
+    title: z.string().trim().min(1),
+    description: z.string().trim().optional(),
+    results: z.array(codeReviewResultRowSchema).min(1),
+});

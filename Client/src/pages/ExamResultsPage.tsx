@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getExamResults } from "@/services/exams";
+import type { ExamResult, IExam, IStudent } from "@/types";
 
 function errMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -52,6 +53,22 @@ function identityLabel(identity: {
   );
 }
 
+function rowId(row: ExamResult): string {
+  if (row._id) return row._id;
+  if (row.id) return row.id;
+  if (row.type === "google_form") return row.googleResponseId;
+  return "";
+}
+
+function rowStudents(row: ExamResult): IStudent[] {
+  if (row.type === "code_review") return row.students ?? [];
+  return row.student ? [row.student] : [];
+}
+
+function sourceLabel(exam: IExam): string | undefined {
+  return exam.type === "google_form" ? exam.googleFormId : undefined;
+}
+
 export default function ExamResultsPage() {
   const { examId = "" } = useParams();
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
@@ -81,6 +98,7 @@ export default function ExamResultsPage() {
     }
   }, [resultsQuery.isError, resultsQuery.error]);
 
+  const exam = resultsQuery.data?.exam;
   const rows = resultsQuery.data?.results ?? [];
   const average = useMemo(() => {
     const scores = rows
@@ -90,10 +108,13 @@ export default function ExamResultsPage() {
     return scores.reduce((total, score) => total + score, 0) / scores.length;
   }, [rows]);
 
+  const backTo =
+    exam?.type === "code_review" ? "/exams" : "/google-forms";
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-8">
       <Button variant="ghost" size="sm" asChild className="mb-4">
-        <Link to="/google-forms">
+        <Link to={backTo}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Link>
@@ -103,7 +124,7 @@ export default function ExamResultsPage() {
         <div className="flex justify-center py-16">
           <LoadingSpinner size="lg" />
         </div>
-      ) : resultsQuery.isError ? (
+      ) : resultsQuery.isError || !exam ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4">
           <Text color="muted">Could not load this exam.</Text>
         </div>
@@ -114,12 +135,14 @@ export default function ExamResultsPage() {
               <div className="flex items-center gap-3">
                 <Icon icon={ClipboardList} size="lg" className="text-blue-600" />
                 <Heading level={1} className="text-3xl md:text-4xl">
-                  {resultsQuery.data?.exam.title ?? "Exam"}
+                  {exam.title}
                 </Heading>
               </div>
-              <Text color="muted" className="mt-2 break-all">
-                {resultsQuery.data?.exam.googleFormId}
-              </Text>
+              {sourceLabel(exam) ? (
+                <Text color="muted" className="mt-2 break-all">
+                  {sourceLabel(exam)}
+                </Text>
+              ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary">{rows.length} results</Badge>
@@ -134,27 +157,40 @@ export default function ExamResultsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
-                  <TableHead>Submitted identity</TableHead>
+                  <TableHead>Details</TableHead>
                   <TableHead>Score</TableHead>
                   <TableHead>Confidence</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((row) => {
-                  const rowId = row._id ?? row.id ?? row.googleResponseId;
+                  const id = rowId(row);
+                  const students = rowStudents(row);
                   return (
                     <TableRow
                       className="cursor-pointer hover:bg-blue-50"
-                      key={rowId}
-                      onClick={() => navigate(`/exams/${examId}/review/${rowId}`)}
+                      key={id}
+                      onClick={() => navigate(`/exams/${examId}/review/${id}`)}
                     >
                       <TableCell>
-                        <div className="font-medium">{row.student.englishName}</div>
-                        <div className="text-sm text-gray-500">{row.student.hebrewName}</div>
+                        <div className="font-medium">
+                          {students.map((s) => s.englishName).join(", ")}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {students.map((s) => s.hebrewName).join(", ")}
+                        </div>
                       </TableCell>
-                      <TableCell>{identityLabel(row.extractedIdentity)}</TableCell>
+                      <TableCell>
+                        {row.type === "google_form"
+                          ? identityLabel(row.extractedIdentity)
+                          : row.githubUrl ?? "—"}
+                      </TableCell>
                       <TableCell>{scoreLabel(row.score, row.maxScore)}</TableCell>
-                      <TableCell>{Math.round(row.matchConfidence * 100)}%</TableCell>
+                      <TableCell>
+                        {row.type === "google_form"
+                          ? `${Math.round(row.matchConfidence * 100)}%`
+                          : "—"}
+                      </TableCell>
                     </TableRow>
                   );
                 })}

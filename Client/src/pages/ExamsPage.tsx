@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth0 } from "@auth0/auth0-react";
 import { AxiosError } from "axios";
 import toast from "react-hot-toast";
-import { ClipboardList, ExternalLink } from "lucide-react";
+import { ClipboardList, ExternalLink, Plus } from "lucide-react";
 
 import { Heading } from "@/components/Atoms/Heading";
 import { Icon } from "@/components/Atoms/Icon";
@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getExams } from "@/services/exams";
+import type { IExam } from "@/types";
 
 function errMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -40,6 +41,34 @@ function examKey(exam: { _id?: string; id?: string }): string {
 function formatDate(value?: string): string {
   if (!value) return "-";
   return new Date(value).toLocaleDateString();
+}
+
+function typeBadge(exam: IExam) {
+  return exam.type === "google_form" ? (
+    <Badge variant="outline">Google Form</Badge>
+  ) : (
+    <Badge className="bg-purple-600 text-white">Code Review</Badge>
+  );
+}
+
+function subtitle(exam: IExam): string {
+  if (exam.type === "google_form") {
+    return exam.identityConfig.mode === "fullName"
+      ? "Full name"
+      : "First + last name";
+  }
+  return exam.description ?? "Instructor code review";
+}
+
+function sourceLabel(exam: IExam): string {
+  return exam.type === "google_form" ? exam.googleFormId : "—";
+}
+
+function maxScoreLabel(exam: IExam): string {
+  if (exam.type === "google_form" && exam.maxScore !== undefined) {
+    return String(exam.maxScore);
+  }
+  return "-";
 }
 
 export default function ExamsPage() {
@@ -82,10 +111,18 @@ export default function ExamsPage() {
             </Heading>
           </div>
           <Text color="muted" className="mt-2">
-            Imported Google Form exams and saved student results.
+            Imported exams and instructor code reviews.
           </Text>
         </div>
-        <Badge variant="secondary">{exams.length} exams</Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant="secondary">{exams.length} exams</Badge>
+          <Button asChild size="sm">
+            <Link to="/exams/code-review/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New code review
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {examsQuery.isLoading ? (
@@ -102,7 +139,8 @@ export default function ExamsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Exam</TableHead>
-                <TableHead>Google Form</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Source</TableHead>
                 <TableHead>Points</TableHead>
                 <TableHead>Updated</TableHead>
                 <TableHead />
@@ -111,22 +149,19 @@ export default function ExamsPage() {
             <TableBody>
               {exams.map((exam) => {
                 const id = examKey(exam);
+                const fallbackKey =
+                  exam.type === "google_form" ? exam.googleFormId : id;
                 return (
-                  <TableRow key={id || exam.googleFormId}>
+                  <TableRow key={id || fallbackKey}>
                     <TableCell>
                       <div className="font-medium">{exam.title}</div>
-                      <div className="text-sm text-gray-500">
-                        {exam.identityConfig.mode === "fullName"
-                          ? "Full name"
-                          : "First + last name"}
-                      </div>
+                      <div className="text-sm text-gray-500">{subtitle(exam)}</div>
                     </TableCell>
+                    <TableCell>{typeBadge(exam)}</TableCell>
                     <TableCell className="max-w-xs truncate">
-                      {exam.googleFormId}
+                      {sourceLabel(exam)}
                     </TableCell>
-                    <TableCell>
-                      {exam.maxScore === undefined ? "-" : exam.maxScore}
-                    </TableCell>
+                    <TableCell>{maxScoreLabel(exam)}</TableCell>
                     <TableCell>{formatDate(exam.updatedAt)}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" asChild disabled={!id}>
@@ -141,8 +176,8 @@ export default function ExamsPage() {
               })}
               {exams.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5}>
-                    <Text color="muted">No imported exams yet.</Text>
+                  <TableCell colSpan={6}>
+                    <Text color="muted">No exams yet.</Text>
                   </TableCell>
                 </TableRow>
               ) : null}

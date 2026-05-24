@@ -1,9 +1,15 @@
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, Github, Users, XCircle } from "lucide-react";
 
 import { Text } from "@/components/Atoms/Text";
 import { Badge } from "@/components/ui/badge";
 import type { GoogleResponseAnswer } from "@/services/googleForms";
-import type { IExam } from "@/types";
+import type {
+  CodeReviewExamResult,
+  ExamResult,
+  GoogleFormExamResult,
+  IExam,
+  IGoogleFormExam,
+} from "@/types";
 
 type QuestionSnapshotItem = {
   itemId?: string;
@@ -52,7 +58,7 @@ function questionKey(item: QuestionSnapshotItem): string | undefined {
   return item.questionItem?.question?.questionId ?? item.itemId;
 }
 
-function questionItem(exam: IExam | undefined, answerId: string) {
+function questionItem(exam: IGoogleFormExam | undefined, answerId: string) {
   return exam?.questionSnapshot.find((entry) => {
     const question = entry as QuestionSnapshotItem;
     return questionKey(question) === answerId;
@@ -60,7 +66,7 @@ function questionItem(exam: IExam | undefined, answerId: string) {
 }
 
 function orderedAnswers(
-  exam: IExam | undefined,
+  exam: IGoogleFormExam | undefined,
   answersSnapshot: Record<string, GoogleResponseAnswer>,
 ) {
   const entries = new Map(Object.entries(answersSnapshot));
@@ -112,14 +118,14 @@ function FreeformAnswers({ values }: { values: string[] }) {
   );
 }
 
-export function ExamSubmissionReview({
+function GoogleFormSubmissionReview({
   exam,
-  answersSnapshot,
+  result,
 }: {
-  exam?: IExam;
-  answersSnapshot: Record<string, GoogleResponseAnswer>;
+  exam?: IGoogleFormExam;
+  result: GoogleFormExamResult;
 }) {
-  const answers = orderedAnswers(exam, answersSnapshot);
+  const answers = orderedAnswers(exam, result.answersSnapshot);
 
   return (
     <div className="space-y-3">
@@ -207,4 +213,64 @@ export function ExamSubmissionReview({
       })}
     </div>
   );
+}
+
+function CodeReviewSubmissionReview({ result }: { result: CodeReviewExamResult }) {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md border border-gray-200 bg-white p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Users className="h-4 w-4 text-blue-600" />
+          <Text className="font-semibold">Group</Text>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {result.students.map((student) => (
+            <Badge
+              key={student._id ?? student.id ?? student.studentId}
+              variant="outline"
+            >
+              {student.englishName}
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-md border border-gray-200 bg-white p-4">
+        <Text className="mb-2 font-semibold">Instructor review</Text>
+        <div className="whitespace-pre-wrap rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-900">
+          {result.reviewText}
+        </div>
+      </div>
+
+      {result.githubUrl ? (
+        <div className="rounded-md border border-gray-200 bg-white p-4">
+          <Text className="mb-2 font-semibold">Repository</Text>
+          <a
+            href={result.githubUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline"
+          >
+            <Github className="h-4 w-4" />
+            {result.githubUrl}
+          </a>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function ExamSubmissionReview({
+  exam,
+  result,
+}: {
+  exam?: IExam;
+  result: ExamResult;
+}) {
+  if (result.type === "code_review") {
+    return <CodeReviewSubmissionReview result={result} />;
+  }
+  const googleExam =
+    exam && exam.type === "google_form" ? exam : undefined;
+  return <GoogleFormSubmissionReview exam={googleExam} result={result} />;
 }

@@ -7,6 +7,7 @@ import GoogleFormResultsPage from "../pages/GoogleFormResultsPage";
 import ExamsPage from "../pages/ExamsPage";
 import ExamResultsPage from "../pages/ExamResultsPage";
 import ExamSubmissionReviewPage from "../pages/ExamSubmissionReviewPage";
+import CodeReviewCreatePage from "../pages/CodeReviewCreatePage";
 import StudentExamsPage from "../pages/StudentExamsPage";
 import StudentExamReviewPage from "../pages/StudentExamReviewPage";
 import StudentsPage from "../pages/StudentsPage";
@@ -98,6 +99,14 @@ export const routeConfig: RouteConfig[] = [
     path: "/google-forms/:formId",
     name: "Google Form Results",
     Component: GoogleFormResultsPage,
+    showInSidebar: false,
+    requireAuth: true,
+    requiredRole: "admin",
+  },
+  {
+    path: "/exams/code-review/new",
+    name: "New Code Review",
+    Component: CodeReviewCreatePage,
     showInSidebar: false,
     requireAuth: true,
     requiredRole: "admin",

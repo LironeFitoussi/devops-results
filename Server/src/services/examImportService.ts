@@ -1,7 +1,7 @@
 import type { OAuth2Client } from "google-auth-library";
 import type { Types } from "mongoose";
-import Exam from "../models/examModel.js";
-import ExamResult from "../models/examResultModel.js";
+import { GoogleFormExamModel } from "../models/examModel.js";
+import { GoogleFormResultModel } from "../models/examResultModel.js";
 import Student from "../models/studentModel.js";
 import User from "../models/userModel.js";
 import { getForm, getResponses } from "./googleFormsService.js";
@@ -10,7 +10,11 @@ import {
     predictStudentMatches,
     type GoogleResponseLike,
 } from "./examMatchingService.js";
-import type { ExamIdentityConfig, IExamDoc, IUserDoc } from "../types/index.js";
+import type {
+    ExamIdentityConfig,
+    IGoogleFormExamDoc,
+    IUserDoc,
+} from "../types/index.js";
 import { AppError } from "../utils/errorHandler.js";
 
 interface FormInfo {
@@ -119,7 +123,7 @@ async function upsertExam(
     formId: string,
     identityConfig: ExamIdentityConfig,
     importedBy?: Types.ObjectId,
-): Promise<IExamDoc> {
+): Promise<IGoogleFormExamDoc> {
     const update = {
         googleFormId: form.formId ?? formId,
         title: formTitle(form, formId),
@@ -131,12 +135,16 @@ async function upsertExam(
         ...(importedBy ? { importedBy } : {}),
     };
 
-    return Exam.findOneAndUpdate({ googleFormId: formId }, update, {
-        new: true,
-        upsert: true,
-        runValidators: true,
-        setDefaultsOnInsert: true,
-    }) as Promise<IExamDoc>;
+    return GoogleFormExamModel.findOneAndUpdate(
+        { googleFormId: formId },
+        update,
+        {
+            new: true,
+            upsert: true,
+            runValidators: true,
+            setDefaultsOnInsert: true,
+        },
+    ) as Promise<IGoogleFormExamDoc>;
 }
 
 export async function importConfirmedGoogleExam(
@@ -191,7 +199,7 @@ export async function importConfirmedGoogleExam(
             confirmedAt: new Date(),
         };
 
-        const saved = await ExamResult.findOneAndUpdate(
+        const saved = await GoogleFormResultModel.findOneAndUpdate(
             { exam: exam._id, googleResponseId: row.responseId },
             resultUpdate,
             {

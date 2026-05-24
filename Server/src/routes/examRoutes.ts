@@ -25,5 +25,10 @@ router.post(
     adminOnly,
     asyncHandler(ctrl.importGoogleExam.bind(ctrl)),
 );
+router.post(
+    "/code-review",
+    adminOnly,
+    asyncHandler(ctrl.createCodeReviewExam.bind(ctrl)),
+);
 
 export default router;
