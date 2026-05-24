@@ -37,6 +37,10 @@ if (!CLIENT_URL) {
 // Trust Vercel/reverse proxy for X-Forwarded-For (rate-limit, req.ip)
 app.set("trust proxy", 1);
 
+// Disable ETag so freshly invalidated React Query refetches always get full bodies
+// (Express's default weak ETag was returning 304s with empty bodies after mutations.)
+app.set("etag", false);
+
 // Cors
 app.use(cors({
     origin: process.env.CLIENT_URL,

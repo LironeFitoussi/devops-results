@@ -97,6 +97,29 @@ const localExamAnswerSchema = new Schema(
     { _id: false },
 );
 
+const localExamGradeEditChangeSchema = new Schema(
+    {
+        questionId: { type: String, trim: true },
+        field: {
+            type: String,
+            enum: ["awardedPoints", "manualOverrideScore", "reopened", "status"],
+            required: true,
+        },
+        before: { type: Schema.Types.Mixed },
+        after: { type: Schema.Types.Mixed },
+    },
+    { _id: false },
+);
+
+const localExamGradeEditSchema = new Schema(
+    {
+        editedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        editedAt: { type: Date, required: true, default: Date.now },
+        changes: { type: [localExamGradeEditChangeSchema], required: true, default: [] },
+    },
+    { _id: false },
+);
+
 const localExamResultSchema = new Schema<ILocalExamResultDoc>(
     {
         student: {
@@ -116,6 +139,7 @@ const localExamResultSchema = new Schema<ILocalExamResultDoc>(
         autoGradedScore: { type: Number, required: true, min: 0, default: 0 },
         manualOverrideScore: { type: Number, min: 0 },
         submittedAt: { type: Date },
+        gradeEdits: { type: [localExamGradeEditSchema], required: true, default: [] },
     },
     { _id: false },
 );

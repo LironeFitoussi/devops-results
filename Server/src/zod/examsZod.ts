@@ -159,6 +159,7 @@ export const gradeLocalExamResultSchema = z.object({
             z.object({
                 questionId: z.string().trim().min(1),
                 awardedPoints: z.number().min(0),
+                isCorrect: z.boolean().optional(),
             }),
         )
         .optional(),

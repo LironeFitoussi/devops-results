@@ -2,6 +2,7 @@ import { CheckCircle2, Github, Users, XCircle } from "lucide-react";
 
 import { Text } from "@/components/Atoms/Text";
 import { Badge } from "@/components/ui/badge";
+import { LocalExamGradePanel } from "@/components/LocalExamGradePanel";
 import type { GoogleResponseAnswer } from "@/services/googleForms";
 import type {
   CodeReviewExamResult,
@@ -272,7 +273,9 @@ function LocalExamSubmissionReview({
   const questionById = new Map(exam?.questions.map((question) => [question.id, question]));
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {exam ? <LocalExamGradePanel exam={exam} result={result} /> : null}
+      <div className="space-y-3">
       {result.answers.map((answer, index) => {
         const question = questionById.get(answer.questionId);
         return (
@@ -334,6 +337,7 @@ function LocalExamSubmissionReview({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

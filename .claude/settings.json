@@ -24,5 +24,10 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"console.log\\(process.env.MONGO_URI ? 'set, len='+process.env.MONGO_URI.length : 'NOT SET'\\)\")"
+    ]
   }
 }

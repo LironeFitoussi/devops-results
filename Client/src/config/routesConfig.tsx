@@ -1,6 +1,9 @@
 import type { ComponentType, ReactNode } from "react";
-import { ClipboardList, FileText, GraduationCap, Home, LayoutDashboard } from "lucide-react";
+import { ClipboardList, FileText, GraduationCap, LayoutDashboard } from "lucide-react";
 import type { SVGProps } from "react";
+import { Navigate } from "react-router";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useAppSelector } from "../redux/hooks";
 import HomePage, { HomePageLoader } from "../pages/HomePage";
 import GoogleFormsPage from "../pages/GoogleFormsPage";
 import GoogleFormResultsPage from "../pages/GoogleFormResultsPage";
@@ -42,15 +45,28 @@ export interface RouteConfig {
   children?: RouteConfig[];
 }
 
+function HomeOrRedirect() {
+  const { isAuthenticated, isLoading } = useAuth0();
+  const { user } = useAppSelector((state) => state.user);
+
+  if (isLoading) return null;
+
+  if (isAuthenticated) {
+    if (user?.role === "student") return <Navigate to="/student-dashboard" replace />;
+    if (user?.role === "admin") return <Navigate to="/exams" replace />;
+  }
+
+  return <HomePage />;
+}
+
 // Define all routes in one place
 export const routeConfig: RouteConfig[] = [
   {
     path: "/",
     name: "Home",
-    Component: HomePage,
+    Component: HomeOrRedirect,
     loader: HomePageLoader,
-    icon: Home,
-    showInSidebar: true,
+    showInSidebar: false,
     index: true,
   },
   {

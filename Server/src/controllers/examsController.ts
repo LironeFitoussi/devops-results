@@ -13,9 +13,11 @@ import {
     assignStudentsToLocalExam,
     closeLocalExam,
     createLocalExam,
+    deleteLocalExam,
     getAssignedLocalExams,
     gradeLocalExamResult,
     publishLocalExam,
+    reopenLocalExamResult,
     startOrGetLocalExam,
     submitLocalExam,
     updateLocalExam,
@@ -149,6 +151,12 @@ class ExamsController {
         res.status(200).json({ success: true, data: result });
     }
 
+    async deleteLocalExam(req: Request, res: Response) {
+        const { id } = examIdParamSchema.parse(req.params);
+        const result = await deleteLocalExam(id);
+        res.status(200).json({ success: true, data: result });
+    }
+
     async getAssignedLocalExams(req: Request, res: Response) {
         const student = await this.getLinkedStudentId(req);
         const result = await getAssignedLocalExams(student);
@@ -175,6 +183,13 @@ class ExamsController {
         const { resultId } = resultIdParamSchema.parse(req.params);
         const payload = gradeLocalExamResultSchema.parse(req.body);
         const result = await gradeLocalExamResult(resultId, payload, user);
+        res.status(200).json({ success: true, data: result });
+    }
+
+    async reopenLocalExamResult(req: Request, res: Response) {
+        const user = await this.getCurrentUser(req);
+        const { resultId } = resultIdParamSchema.parse(req.params);
+        const result = await reopenLocalExamResult(resultId, user);
         res.status(200).json({ success: true, data: result });
     }
 

@@ -6,6 +6,7 @@ import Student from "../models/studentModel.js";
 import type {
     ILocalExamAnswer,
     ILocalExamDoc,
+    ILocalExamGradeEditChange,
     ILocalExamQuestion,
     IUserDoc,
 } from "../types/index.js";
@@ -297,31 +298,139 @@ export async function gradeLocalExamResult(
         throw new AppError("Cannot grade an in-progress exam", 409);
     }
 
+    const exam = await LocalExamModel.findById(result.exam);
+    if (!exam) {
+        throw new AppError("Local exam not found", 404);
+    }
+
+    const questionById = new Map(
+        exam.questions.map((question) => [question.id, question]),
+    );
+    const changes: ILocalExamGradeEditChange[] = [];
+
     if (payload.answers) {
-        const overrides = new Map(
-            payload.answers.map((answer) => [answer.questionId, answer.awardedPoints]),
+        for (const override of payload.answers) {
+            const question = questionById.get(override.questionId);
+            if (!question) {
+                throw new AppError(
+                    `Question ${override.questionId} does not belong to this exam`,
+                    400,
+                );
+            }
+            if (override.awardedPoints > question.points) {
+                throw new AppError(
+                    `Awarded points for question ${override.questionId} exceeds the question max (${question.points})`,
+                    400,
+                );
+            }
+        }
+
+        const overrideById = new Map(
+            payload.answers.map((answer) => [
+                answer.questionId,
+                { awardedPoints: answer.awardedPoints, isCorrect: answer.isCorrect },
+            ]),
         );
-        result.answers = result.answers.map((answer) => {
-            const override = overrides.get(answer.questionId);
-            if (override === undefined) return answer;
+
+        let anyAnswerChanged = false;
+        const nextAnswers: ILocalExamAnswer[] = result.answers.map((answer) => {
+            const override = overrideById.get(answer.questionId);
+            if (!override) return { ...answer };
+            const nextPoints = override.awardedPoints;
+            const nextIsCorrect =
+                override.isCorrect !== undefined ? override.isCorrect : answer.isCorrect;
+            const pointsChanged = nextPoints !== answer.awardedPoints;
+            const correctChanged = nextIsCorrect !== answer.isCorrect;
+            if (!pointsChanged && !correctChanged) return { ...answer };
+            if (pointsChanged) {
+                changes.push({
+                    questionId: answer.questionId,
+                    field: "awardedPoints",
+                    before: answer.awardedPoints,
+                    after: nextPoints,
+                });
+            }
+            anyAnswerChanged = true;
             return {
                 ...answer,
-                awardedPoints: override,
+                awardedPoints: nextPoints,
+                isCorrect: nextIsCorrect,
                 manualOverride: true,
             };
         });
+        if (anyAnswerChanged) {
+            result.set("answers", nextAnswers);
+            result.markModified("answers");
+        }
+    }
+
+    if (payload.manualOverrideScore !== result.manualOverrideScore) {
+        changes.push({
+            field: "manualOverrideScore",
+            before: result.manualOverrideScore,
+            after: payload.manualOverrideScore,
+        });
+        result.manualOverrideScore = payload.manualOverrideScore;
     }
 
     const computedScore = result.answers.reduce(
         (total, answer) => total + (answer.awardedPoints ?? 0),
         0,
     );
-    const finalScore = payload.manualOverrideScore ?? computedScore;
-    result.manualOverrideScore = payload.manualOverrideScore;
+    const finalScore = result.manualOverrideScore ?? computedScore;
     result.score = finalScore;
-    result.status = "graded";
-    result.confirmedBy = user._id;
-    result.confirmedAt = new Date();
+
+    if (result.status !== "graded") {
+        changes.push({
+            field: "status",
+            before: result.status,
+            after: "graded",
+        });
+        result.status = "graded";
+    }
+
+    if (changes.length > 0) {
+        result.gradeEdits.push({
+            editedBy: user._id,
+            editedAt: new Date(),
+            changes,
+        });
+        result.confirmedBy = user._id;
+        result.confirmedAt = new Date();
+    }
+
+    await result.save();
+
+    return { result };
+}
+
+export async function deleteLocalExam(id: string) {
+    const exam = await findLocalExam(id);
+    await LocalExamResultModel.deleteMany({ exam: exam._id });
+    await exam.deleteOne();
+    return { ok: true };
+}
+
+export async function reopenLocalExamResult(resultId: string, user: IUserDoc) {
+    const result = await LocalExamResultModel.findById(asObjectId(resultId, "result id"));
+    if (!result) {
+        throw new AppError("Local exam result not found", 404);
+    }
+    if (result.status === "in_progress") {
+        throw new AppError("Exam is already in progress", 409);
+    }
+
+    const previousStatus = result.status;
+    result.status = "in_progress";
+    result.set("score", undefined);
+    result.set("manualOverrideScore", undefined);
+    result.gradeEdits.push({
+        editedBy: user._id,
+        editedAt: new Date(),
+        changes: [
+            { field: "reopened", before: previousStatus, after: "in_progress" },
+        ],
+    });
     await result.save();
 
     return { result };

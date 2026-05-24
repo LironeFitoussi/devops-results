@@ -209,3 +209,26 @@ export const gradeLocalExamResult = async (
   );
   return data.data;
 };
+
+export const reopenLocalExamResult = async (
+  token: string,
+  resultId: string,
+): Promise<{ result: LocalExamResult }> => {
+  const { data } = await api.post(
+    `/exams/results/${encodeURIComponent(resultId)}/reopen`,
+    {},
+    authConfig(token),
+  );
+  return data.data;
+};
+
+export const deleteLocalExam = async (
+  token: string,
+  examId: string,
+): Promise<{ ok: true }> => {
+  const { data } = await api.delete(
+    `/exams/local/${encodeURIComponent(examId)}`,
+    authConfig(token),
+  );
+  return data.data;
+};

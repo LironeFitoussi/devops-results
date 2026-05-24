@@ -148,6 +148,25 @@ export interface LocalExamAnswer {
   manualOverride?: boolean;
 }
 
+export type LocalExamGradeEditField =
+  | "awardedPoints"
+  | "manualOverrideScore"
+  | "reopened"
+  | "status";
+
+export interface LocalExamGradeEditChange {
+  questionId?: string;
+  field: LocalExamGradeEditField;
+  before?: unknown;
+  after?: unknown;
+}
+
+export interface LocalExamGradeEdit {
+  editedBy: string;
+  editedAt: string;
+  changes: LocalExamGradeEditChange[];
+}
+
 export interface LocalExamResult extends ExamResultBase {
   type: "local";
   student: IStudent;
@@ -156,6 +175,7 @@ export interface LocalExamResult extends ExamResultBase {
   autoGradedScore: number;
   manualOverrideScore?: number;
   submittedAt?: string;
+  gradeEdits?: LocalExamGradeEdit[];
 }
 
 export type ExamResult =
@@ -213,5 +233,6 @@ export interface GradeLocalExamResultInput {
   answers?: Array<{
     questionId: string;
     awardedPoints: number;
+    isCorrect?: boolean;
   }>;
 }

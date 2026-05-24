@@ -39,6 +39,11 @@ router.patch(
     adminOnly,
     asyncHandler(ctrl.gradeLocalExamResult.bind(ctrl)),
 );
+router.post(
+    "/results/:resultId/reopen",
+    adminOnly,
+    asyncHandler(ctrl.reopenLocalExamResult.bind(ctrl)),
+);
 router.get("/:id/results", adminOnly, asyncHandler(ctrl.getExamResults.bind(ctrl)));
 router.post(
     "/import-google",
@@ -69,6 +74,11 @@ router.post(
     "/local/:id/close",
     adminOnly,
     asyncHandler(ctrl.closeLocalExam.bind(ctrl)),
+);
+router.delete(
+    "/local/:id",
+    adminOnly,
+    asyncHandler(ctrl.deleteLocalExam.bind(ctrl)),
 );
 router.post(
     "/code-review",

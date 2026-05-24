@@ -36,6 +36,25 @@ export interface ILocalExamAnswer {
     manualOverride?: boolean | undefined;
 }
 
+export type LocalExamGradeEditField =
+    | "awardedPoints"
+    | "manualOverrideScore"
+    | "reopened"
+    | "status";
+
+export interface ILocalExamGradeEditChange {
+    questionId?: string;
+    field: LocalExamGradeEditField;
+    before?: unknown;
+    after?: unknown;
+}
+
+export interface ILocalExamGradeEdit {
+    editedBy: Types.ObjectId;
+    editedAt: Date;
+    changes: ILocalExamGradeEditChange[];
+}
+
 export type ExamIdentityMode = "firstLast" | "fullName";
 
 export interface ExamIdentityConfig {
@@ -137,6 +156,7 @@ export interface ILocalExamResult extends IExamResultBase {
     autoGradedScore: number;
     manualOverrideScore?: number | undefined;
     submittedAt?: Date | undefined;
+    gradeEdits: ILocalExamGradeEdit[];
 }
 
 export type IExamResult = IGoogleFormResult | ICodeReviewResult | ILocalExamResult;

@@ -1,10 +1,10 @@
 import { useCallback, useEffect } from "react";
 import { Link } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth0 } from "@auth0/auth0-react";
 import { AxiosError } from "axios";
 import toast from "react-hot-toast";
-import { ClipboardList, ExternalLink, Plus, Users } from "lucide-react";
+import { ClipboardList, ExternalLink, Plus, Trash2, Users } from "lucide-react";
 
 import { Heading } from "@/components/Atoms/Heading";
 import { Icon } from "@/components/Atoms/Icon";
@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getExams } from "@/services/exams";
+import { deleteLocalExam, getExams } from "@/services/exams";
 import type { IExam } from "@/types";
 
 function errMessage(error: unknown): string {
@@ -77,6 +77,7 @@ function maxScoreLabel(exam: IExam): string {
 
 export default function ExamsPage() {
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const queryClient = useQueryClient();
 
   const getToken = useCallback(
     () =>
@@ -95,6 +96,26 @@ export default function ExamsPage() {
     enabled: isAuthenticated,
     retry: false,
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => deleteLocalExam(await getToken(), id),
+    onSuccess: () => {
+      toast.success("Exam deleted");
+      queryClient.invalidateQueries({ queryKey: ["exams"] });
+    },
+    onError: (error) => toast.error(`Delete failed: ${errMessage(error)}`),
+  });
+
+  const handleDelete = (exam: IExam, id: string) => {
+    if (
+      !window.confirm(
+        `Delete "${exam.title}" and all its results? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    deleteMutation.mutate(id);
+  };
 
   useEffect(() => {
     if (examsQuery.isError) {
@@ -188,6 +209,18 @@ export default function ExamsPage() {
                           Open
                         </Link>
                       </Button>
+                      {exam.type === "local" ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                          disabled={!id || deleteMutation.isPending}
+                          onClick={() => handleDelete(exam, id)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </Button>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 );
