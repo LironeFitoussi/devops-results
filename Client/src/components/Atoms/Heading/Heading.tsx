@@ -6,6 +6,7 @@ export interface HeadingProps {
   level?: 1 | 2 | 3 | 4 | 5 | 6;
   className?: string;
   gradient?: boolean;
+  id?: string;
 }
 
 const levelClasses = {
@@ -17,17 +18,19 @@ const levelClasses = {
   6: "text-lg font-semibold",
 };
 
-export default function Heading({ 
-  children, 
-  level = 1, 
+export default function Heading({
+  children,
+  level = 1,
   className,
-  gradient = false 
+  gradient = false,
+  id,
 }: HeadingProps) {
   const Tag = `h${level}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
   const baseClasses = levelClasses[level];
-  
+
   return (
     <Tag
+      id={id}
       className={cn(
         baseClasses,
         gradient && "text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-500",
