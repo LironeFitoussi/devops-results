@@ -1,11 +1,19 @@
 import api from "./api";
 import type {
+  AssignedLocalExam,
   CreateCodeReviewExamInput,
+  CreateLocalExamInput,
   ExamIdentityConfig,
   ExamImportPreview,
   ExamResult,
   ExamResultsResponse,
+  GradeLocalExamResultInput,
   IExam,
+  ILocalExam,
+  LocalExamResult,
+  StartLocalExamResponse,
+  SubmitLocalExamInput,
+  UpdateLocalExamInput,
 } from "@/types";
 
 export interface ConfirmedImportRow {
@@ -94,6 +102,108 @@ export const createCodeReviewExam = async (
 ): Promise<{ exam: IExam; results: ExamResult[] }> => {
   const { data } = await api.post(
     "/exams/code-review",
+    payload,
+    authConfig(token),
+  );
+  return data.data;
+};
+
+export const createLocalExam = async (
+  token: string,
+  payload: CreateLocalExamInput,
+): Promise<{ exam: ILocalExam }> => {
+  const { data } = await api.post("/exams/local", payload, authConfig(token));
+  return data.data;
+};
+
+export const updateLocalExam = async (
+  token: string,
+  examId: string,
+  payload: UpdateLocalExamInput,
+): Promise<{ exam: ILocalExam }> => {
+  const { data } = await api.patch(
+    `/exams/local/${encodeURIComponent(examId)}`,
+    payload,
+    authConfig(token),
+  );
+  return data.data;
+};
+
+export const assignLocalExamStudents = async (
+  token: string,
+  examId: string,
+  studentIds: string[],
+): Promise<{ exam: ILocalExam }> => {
+  const { data } = await api.post(
+    `/exams/local/${encodeURIComponent(examId)}/assign`,
+    { studentIds },
+    authConfig(token),
+  );
+  return data.data;
+};
+
+export const publishLocalExam = async (
+  token: string,
+  examId: string,
+): Promise<{ exam: ILocalExam }> => {
+  const { data } = await api.post(
+    `/exams/local/${encodeURIComponent(examId)}/publish`,
+    {},
+    authConfig(token),
+  );
+  return data.data;
+};
+
+export const closeLocalExam = async (
+  token: string,
+  examId: string,
+): Promise<{ exam: ILocalExam }> => {
+  const { data } = await api.post(
+    `/exams/local/${encodeURIComponent(examId)}/close`,
+    {},
+    authConfig(token),
+  );
+  return data.data;
+};
+
+export const getAssignedLocalExams = async (
+  token: string,
+): Promise<AssignedLocalExam[]> => {
+  const { data } = await api.get("/exams/local/assigned", authConfig(token));
+  return data.data;
+};
+
+export const startLocalExam = async (
+  token: string,
+  examId: string,
+): Promise<StartLocalExamResponse> => {
+  const { data } = await api.get(
+    `/exams/local/${encodeURIComponent(examId)}/take`,
+    authConfig(token),
+  );
+  return data.data;
+};
+
+export const submitLocalExam = async (
+  token: string,
+  examId: string,
+  payload: SubmitLocalExamInput,
+): Promise<{ result: LocalExamResult }> => {
+  const { data } = await api.post(
+    `/exams/local/${encodeURIComponent(examId)}/submit`,
+    payload,
+    authConfig(token),
+  );
+  return data.data;
+};
+
+export const gradeLocalExamResult = async (
+  token: string,
+  resultId: string,
+  payload: GradeLocalExamResultInput,
+): Promise<{ result: LocalExamResult }> => {
+  const { data } = await api.patch(
+    `/exams/results/${encodeURIComponent(resultId)}/grade`,
     payload,
     authConfig(token),
   );

@@ -8,6 +8,9 @@ import ExamsPage from "../pages/ExamsPage";
 import ExamResultsPage from "../pages/ExamResultsPage";
 import ExamSubmissionReviewPage from "../pages/ExamSubmissionReviewPage";
 import CodeReviewCreatePage from "../pages/CodeReviewCreatePage";
+import LocalExamAssignPage from "../pages/LocalExamAssignPage";
+import LocalExamCreatePage from "../pages/LocalExamCreatePage";
+import LocalExamTakePage from "../pages/LocalExamTakePage";
 import StudentExamsPage from "../pages/StudentExamsPage";
 import StudentExamReviewPage from "../pages/StudentExamReviewPage";
 import StudentsPage from "../pages/StudentsPage";
@@ -112,6 +115,22 @@ export const routeConfig: RouteConfig[] = [
     requiredRole: "admin",
   },
   {
+    path: "/exams/local/new",
+    name: "New Local Exam",
+    Component: LocalExamCreatePage,
+    showInSidebar: false,
+    requireAuth: true,
+    requiredRole: "admin",
+  },
+  {
+    path: "/exams/local/:examId/assign",
+    name: "Assign Local Exam",
+    Component: LocalExamAssignPage,
+    showInSidebar: false,
+    requireAuth: true,
+    requiredRole: "admin",
+  },
+  {
     path: "/exams/:examId",
     name: "Exam Results",
     Component: ExamResultsPage,
@@ -126,6 +145,14 @@ export const routeConfig: RouteConfig[] = [
     showInSidebar: false,
     requireAuth: true,
     requiredRole: "admin",
+  },
+  {
+    path: "/student-exams/take/:examId",
+    name: "Take Exam",
+    Component: LocalExamTakePage,
+    showInSidebar: false,
+    requireAuth: true,
+    requiredRole: "student",
   },
   {
     path: "/student-exams/:resultId",

@@ -3,13 +3,14 @@ services:
     build:
       context: .
       target: development
-    container_name: mern-server
+    image: devops-exams-express
+    container_name: devops-exams-server
     restart: unless-stopped
     env_file: .env
     ports:
       - "3000:3000"
     networks:
-      - mern-network
+      - devops-exams-net
     develop:
       watch:
         - action: sync
@@ -21,5 +22,5 @@ services:
           path: package-lock.json
 
 networks:
-  mern-network:
+  devops-exams-net:
     driver: bridge

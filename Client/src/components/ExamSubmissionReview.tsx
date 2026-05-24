@@ -9,6 +9,8 @@ import type {
   GoogleFormExamResult,
   IExam,
   IGoogleFormExam,
+  ILocalExam,
+  LocalExamResult,
 } from "@/types";
 
 type QuestionSnapshotItem = {
@@ -260,6 +262,82 @@ function CodeReviewSubmissionReview({ result }: { result: CodeReviewExamResult }
   );
 }
 
+function LocalExamSubmissionReview({
+  exam,
+  result,
+}: {
+  exam?: ILocalExam;
+  result: LocalExamResult;
+}) {
+  const questionById = new Map(exam?.questions.map((question) => [question.id, question]));
+
+  return (
+    <div className="space-y-3">
+      {result.answers.map((answer, index) => {
+        const question = questionById.get(answer.questionId);
+        return (
+          <div
+            className="rounded-md border border-gray-200 bg-white p-4"
+            key={answer.questionId}
+          >
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <Text className="font-semibold">
+                  {question?.prompt ?? `Question ${index + 1}`}
+                </Text>
+                <Text variant="caption" color="muted" className="mt-1">
+                  {answer.questionId}
+                </Text>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">
+                  {scoreLabel(answer.awardedPoints, question?.points)}
+                </Badge>
+                {answer.isCorrect === true ? (
+                  <Badge className="bg-emerald-600 text-white">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Correct
+                  </Badge>
+                ) : answer.isCorrect === false ? (
+                  <Badge variant="destructive">
+                    <XCircle className="h-3 w-3" />
+                    Incorrect
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
+
+            {question?.options ? (
+              <div className="mt-4 grid gap-2 md:grid-cols-2">
+                {question.options.map((option) => {
+                  const selected = answer.selectedOptionIds?.includes(option.id) ?? false;
+                  return (
+                    <div
+                      className={`rounded-md border px-3 py-2 text-sm ${
+                        selected
+                          ? "border-blue-300 bg-blue-50 text-blue-900"
+                          : "border-gray-200 bg-white text-gray-700"
+                      }`}
+                      key={option.id}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span>{option.label}</span>
+                        {selected ? <Badge variant="outline">Selected</Badge> : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <FreeformAnswers values={[answer.textAnswer?.trim() || "No answer"]} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ExamSubmissionReview({
   exam,
   result,
@@ -269,6 +347,10 @@ export function ExamSubmissionReview({
 }) {
   if (result.type === "code_review") {
     return <CodeReviewSubmissionReview result={result} />;
+  }
+  if (result.type === "local") {
+    const localExam = exam && exam.type === "local" ? exam : undefined;
+    return <LocalExamSubmissionReview exam={localExam} result={result} />;
   }
   const googleExam =
     exam && exam.type === "google_form" ? exam : undefined;

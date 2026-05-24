@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth0 } from "@auth0/auth0-react";
 import { AxiosError } from "axios";
 import toast from "react-hot-toast";
-import { ClipboardList, ExternalLink, Plus } from "lucide-react";
+import { ClipboardList, ExternalLink, Plus, Users } from "lucide-react";
 
 import { Heading } from "@/components/Atoms/Heading";
 import { Icon } from "@/components/Atoms/Icon";
@@ -44,11 +44,9 @@ function formatDate(value?: string): string {
 }
 
 function typeBadge(exam: IExam) {
-  return exam.type === "google_form" ? (
-    <Badge variant="outline">Google Form</Badge>
-  ) : (
-    <Badge className="bg-purple-600 text-white">Code Review</Badge>
-  );
+  if (exam.type === "google_form") return <Badge variant="outline">Google Form</Badge>;
+  if (exam.type === "local") return <Badge className="bg-blue-600 text-white">Local</Badge>;
+  return <Badge className="bg-purple-600 text-white">Code Review</Badge>;
 }
 
 function subtitle(exam: IExam): string {
@@ -57,17 +55,23 @@ function subtitle(exam: IExam): string {
       ? "Full name"
       : "First + last name";
   }
+  if (exam.type === "local") {
+    return `${exam.status} - ${exam.questions.length} questions`;
+  }
   return exam.description ?? "Instructor code review";
 }
 
 function sourceLabel(exam: IExam): string {
-  return exam.type === "google_form" ? exam.googleFormId : "—";
+  if (exam.type === "google_form") return exam.googleFormId;
+  if (exam.type === "local") return `${exam.assignedStudents.length} assigned`;
+  return "-";
 }
 
 function maxScoreLabel(exam: IExam): string {
   if (exam.type === "google_form" && exam.maxScore !== undefined) {
     return String(exam.maxScore);
   }
+  if (exam.type === "local") return String(exam.totalPoints);
   return "-";
 }
 
@@ -111,11 +115,17 @@ export default function ExamsPage() {
             </Heading>
           </div>
           <Text color="muted" className="mt-2">
-            Imported exams and instructor code reviews.
+            Imported exams, local exams, and instructor code reviews.
           </Text>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Badge variant="secondary">{exams.length} exams</Badge>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/exams/local/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New local exam
+            </Link>
+          </Button>
           <Button asChild size="sm">
             <Link to="/exams/code-review/new">
               <Plus className="mr-2 h-4 w-4" />
@@ -163,7 +173,15 @@ export default function ExamsPage() {
                     </TableCell>
                     <TableCell>{maxScoreLabel(exam)}</TableCell>
                     <TableCell>{formatDate(exam.updatedAt)}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="space-x-2 text-right">
+                      {exam.type === "local" ? (
+                        <Button variant="ghost" size="sm" asChild disabled={!id}>
+                          <Link to={`/exams/local/${id}/assign`}>
+                            <Users className="mr-2 h-4 w-4" />
+                            Assign
+                          </Link>
+                        </Button>
+                      ) : null}
                       <Button variant="ghost" size="sm" asChild disabled={!id}>
                         <Link to={`/exams/${id}`}>
                           <ExternalLink className="mr-2 h-4 w-4" />

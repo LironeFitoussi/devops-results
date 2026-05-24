@@ -74,6 +74,7 @@ export default function ExamSubmissionReviewPage() {
 
   const headerName = (row: ExamResult): string => {
     if (row.type === "google_form") return row.student.englishName;
+    if (row.type === "local") return row.student.englishName;
     return row.students.map((s) => s.englishName).join(", ") || "Group";
   };
 
