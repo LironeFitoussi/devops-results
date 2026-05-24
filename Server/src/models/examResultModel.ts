@@ -56,7 +56,7 @@ const googleFormResultSchema = new Schema<IGoogleFormResultDoc>(
 
 googleFormResultSchema.index(
     { exam: 1, googleResponseId: 1 },
-    { unique: true, sparse: true },
+    { unique: true, partialFilterExpression: { type: "google_form" } },
 );
 
 const githubUrlRegex = /^https?:\/\/(www\.)?github\.com\/.+/i;
