@@ -13,6 +13,7 @@ import type {
   LocalExamResult,
   StartLocalExamResponse,
   SubmitLocalExamInput,
+  UpdateCodeReviewExamInput,
   UpdateLocalExamInput,
 } from "@/types";
 
@@ -102,6 +103,19 @@ export const createCodeReviewExam = async (
 ): Promise<{ exam: IExam; results: ExamResult[] }> => {
   const { data } = await api.post(
     "/exams/code-review",
+    payload,
+    authConfig(token),
+  );
+  return data.data;
+};
+
+export const updateCodeReviewExam = async (
+  token: string,
+  examId: string,
+  payload: UpdateCodeReviewExamInput,
+): Promise<{ exam: IExam; results: ExamResult[] }> => {
+  const { data } = await api.patch(
+    `/exams/code-review/${encodeURIComponent(examId)}`,
     payload,
     authConfig(token),
   );

@@ -85,5 +85,10 @@ router.post(
     adminOnly,
     asyncHandler(ctrl.createCodeReviewExam.bind(ctrl)),
 );
+router.patch(
+    "/code-review/:id",
+    adminOnly,
+    asyncHandler(ctrl.updateCodeReviewExam.bind(ctrl)),
+);
 
 export default router;

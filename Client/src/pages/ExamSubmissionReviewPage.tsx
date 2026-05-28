@@ -114,7 +114,9 @@ export default function ExamSubmissionReviewPage() {
               </Text>
             </div>
             <Badge variant="secondary">
-              {scoreLabel(result.score, result.maxScore)}
+              {result.type === "code_review" && result.grade !== undefined
+                ? `${result.grade} / 100`
+                : scoreLabel(result.score, result.maxScore)}
             </Badge>
           </div>
 

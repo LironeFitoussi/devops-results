@@ -184,12 +184,12 @@ export default function ExamsPage() {
                   exam.type === "google_form" ? exam.googleFormId : id;
                 return (
                   <TableRow key={id || fallbackKey}>
-                    <TableCell>
+                    <TableCell className="max-w-xs">
                       <div className="font-medium">{exam.title}</div>
-                      <div className="text-sm text-gray-500">{subtitle(exam)}</div>
+                      <div className="text-sm text-gray-500 line-clamp-2">{subtitle(exam)}</div>
                     </TableCell>
                     <TableCell>{typeBadge(exam)}</TableCell>
-                    <TableCell className="max-w-xs truncate">
+                    <TableCell className="max-w-[160px] truncate text-xs text-gray-500">
                       {sourceLabel(exam)}
                     </TableCell>
                     <TableCell>{maxScoreLabel(exam)}</TableCell>

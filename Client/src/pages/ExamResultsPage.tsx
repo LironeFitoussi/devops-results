@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth0 } from "@auth0/auth0-react";
-import { ArrowLeft, ClipboardList } from "lucide-react";
+import { ArrowLeft, ClipboardList, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
 import { AxiosError } from "axios";
 
@@ -120,7 +120,9 @@ export default function ExamResultsPage() {
   );
   const average = useMemo(() => {
     const scores = rows
-      .map((row) => row.score)
+      .map((row) =>
+        row.type === "code_review" ? row.grade : row.score,
+      )
       .filter((score): score is number => typeof score === "number");
     if (scores.length === 0) return undefined;
     return scores.reduce((total, score) => total + score, 0) / scores.length;
@@ -161,11 +163,19 @@ export default function ExamResultsPage() {
                 </Text>
               ) : null}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary">{rows.length} results</Badge>
               <Badge variant="outline">
                 Average {average === undefined ? "-" : average.toFixed(1)}
               </Badge>
+              {exam.type === "code_review" ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link to={`/exams/code-review/${examId}/edit`}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </Link>
+                </Button>
+              ) : null}
             </div>
           </div>
 

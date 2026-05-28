@@ -11,6 +11,7 @@ import ExamsPage from "../pages/ExamsPage";
 import ExamResultsPage from "../pages/ExamResultsPage";
 import ExamSubmissionReviewPage from "../pages/ExamSubmissionReviewPage";
 import CodeReviewCreatePage from "../pages/CodeReviewCreatePage";
+import CodeReviewEditPage from "../pages/CodeReviewEditPage";
 import LocalExamAssignPage from "../pages/LocalExamAssignPage";
 import LocalExamCreatePage from "../pages/LocalExamCreatePage";
 import LocalExamEditPage from "../pages/LocalExamEditPage";
@@ -127,6 +128,14 @@ export const routeConfig: RouteConfig[] = [
     path: "/exams/code-review/new",
     name: "New Code Review",
     Component: CodeReviewCreatePage,
+    showInSidebar: false,
+    requireAuth: true,
+    requiredRole: "admin",
+  },
+  {
+    path: "/exams/code-review/:examId/edit",
+    name: "Edit Code Review",
+    Component: CodeReviewEditPage,
     showInSidebar: false,
     requireAuth: true,
     requiredRole: "admin",

@@ -125,6 +125,7 @@ export interface IExamResultBase {
     maxScore?: number;
     confirmedBy?: Types.ObjectId;
     confirmedAt: Date;
+    student?: Types.ObjectId;
 }
 
 export interface IGoogleFormResult extends IExamResultBase {
@@ -146,6 +147,7 @@ export interface ICodeReviewResult extends IExamResultBase {
     students: Types.ObjectId[];
     reviewText: string;
     githubUrl?: string;
+    grade?: number;
 }
 
 export interface ILocalExamResult extends IExamResultBase {

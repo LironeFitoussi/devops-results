@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth0 } from "@auth0/auth0-react";
 import { AxiosError } from "axios";
@@ -12,11 +12,12 @@ import { LoadingSpinner } from "@/components/Atoms/LoadingSpinner";
 import { Text } from "@/components/Atoms/Text";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { createCodeReviewExam } from "@/services/exams";
+import { getExamResults, updateCodeReviewExam } from "@/services/exams";
 import { getStudents } from "@/services/students";
-import type { CreateCodeReviewExamInput, IStudent } from "@/types";
+import type { CodeReviewExamResult, IStudent, UpdateCodeReviewExamInput } from "@/types";
 
 interface GroupRow {
+  _id?: string;
   studentIds: string[];
   reviewText: string;
   githubUrl: string;
@@ -42,14 +43,16 @@ function studentKey(student: IStudent): string {
   return student._id ?? student.id ?? "";
 }
 
-export default function CodeReviewCreatePage() {
+export default function CodeReviewEditPage() {
+  const { examId = "" } = useParams();
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [rows, setRows] = useState<GroupRow[]>([emptyRow()]);
+  const [rows, setRows] = useState<GroupRow[]>([]);
+  const [initialized, setInitialized] = useState(false);
 
   const getToken = useCallback(
     () =>
@@ -62,6 +65,13 @@ export default function CodeReviewCreatePage() {
     [getAccessTokenSilently],
   );
 
+  const resultsQuery = useQuery({
+    queryKey: ["exam-results", examId],
+    queryFn: async () => getExamResults(await getToken(), examId),
+    enabled: isAuthenticated && examId.length > 0,
+    retry: false,
+  });
+
   const studentsQuery = useQuery({
     queryKey: ["students"],
     queryFn: async () => getStudents(await getToken()),
@@ -69,52 +79,65 @@ export default function CodeReviewCreatePage() {
     retry: false,
   });
 
+  // populate form once data loads
   useEffect(() => {
-    if (studentsQuery.isError) {
-      toast.error(`Students: ${errMessage(studentsQuery.error)}`);
-    }
+    if (initialized || !resultsQuery.data) return;
+    const { exam, results } = resultsQuery.data;
+    setTitle(exam.title ?? "");
+    setDescription(exam.description ?? "");
+    const codeReviewResults = results.filter(
+      (r): r is CodeReviewExamResult => r.type === "code_review",
+    );
+    setRows(
+      codeReviewResults.map((r) => ({
+        _id: r._id ?? r.id,
+        studentIds: r.students.map((s) => studentKey(s)),
+        reviewText: r.reviewText,
+        githubUrl: r.githubUrl ?? "",
+        grade: r.grade !== undefined ? String(r.grade) : "",
+      })),
+    );
+    setInitialized(true);
+  }, [resultsQuery.data, initialized]);
+
+  useEffect(() => {
+    if (resultsQuery.isError) toast.error(`Load failed: ${errMessage(resultsQuery.error)}`);
+  }, [resultsQuery.isError, resultsQuery.error]);
+
+  useEffect(() => {
+    if (studentsQuery.isError) toast.error(`Students: ${errMessage(studentsQuery.error)}`);
   }, [studentsQuery.isError, studentsQuery.error]);
 
   const mutation = useMutation({
-    mutationFn: async (payload: CreateCodeReviewExamInput) =>
-      createCodeReviewExam(await getToken(), payload),
-    onSuccess: ({ exam }) => {
-      toast.success("Code review created");
+    mutationFn: async (payload: UpdateCodeReviewExamInput) =>
+      updateCodeReviewExam(await getToken(), examId, payload),
+    onSuccess: () => {
+      toast.success("Code review updated");
+      queryClient.invalidateQueries({ queryKey: ["exam-results", examId] });
       queryClient.invalidateQueries({ queryKey: ["exams"] });
-      const id = exam._id ?? exam.id;
-      if (id) {
-        navigate(`/exams/${id}`);
-      } else {
-        navigate("/exams");
-      }
+      navigate(`/exams/${examId}`);
     },
     onError: (error) => {
-      toast.error(`Create failed: ${errMessage(error)}`);
+      toast.error(`Update failed: ${errMessage(error)}`);
     },
   });
 
   const students = studentsQuery.data ?? [];
 
-  const updateRow = (index: number, patch: Partial<GroupRow>) => {
-    setRows((prev) =>
-      prev.map((row, i) => (i === index ? { ...row, ...patch } : row)),
-    );
-  };
+  const updateRow = (index: number, patch: Partial<GroupRow>) =>
+    setRows((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
 
-  const toggleStudent = (index: number, id: string) => {
+  const toggleStudent = (index: number, id: string) =>
     setRows((prev) =>
       prev.map((row, i) => {
         if (i !== index) return row;
         const has = row.studentIds.includes(id);
         return {
           ...row,
-          studentIds: has
-            ? row.studentIds.filter((sid) => sid !== id)
-            : [...row.studentIds, id],
+          studentIds: has ? row.studentIds.filter((sid) => sid !== id) : [...row.studentIds, id],
         };
       }),
     );
-  };
 
   const addRow = () => setRows((prev) => [...prev, emptyRow()]);
   const removeRow = (index: number) =>
@@ -122,69 +145,56 @@ export default function CodeReviewCreatePage() {
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-
-    if (!title.trim()) {
-      toast.error("Title is required");
-      return;
-    }
-    if (rows.length === 0) {
-      toast.error("Add at least one group");
-      return;
-    }
+    if (!title.trim()) { toast.error("Title is required"); return; }
     for (const [i, row] of rows.entries()) {
-      if (row.studentIds.length === 0) {
-        toast.error(`Group ${i + 1}: pick at least one student`);
-        return;
-      }
-      if (!row.reviewText.trim()) {
-        toast.error(`Group ${i + 1}: review text is required`);
-        return;
-      }
+      if (row.studentIds.length === 0) { toast.error(`Group ${i + 1}: pick at least one student`); return; }
+      if (!row.reviewText.trim()) { toast.error(`Group ${i + 1}: review text is required`); return; }
     }
 
-    const payload: CreateCodeReviewExamInput = {
+    const payload: UpdateCodeReviewExamInput = {
       title: title.trim(),
       description: description.trim() || undefined,
       results: rows.map((row) => ({
+        _id: row._id,
         studentIds: row.studentIds,
         reviewText: row.reviewText.trim(),
         githubUrl: row.githubUrl.trim() || undefined,
         grade: row.grade !== "" ? Number(row.grade) : undefined,
       })),
     };
-
     mutation.mutate(payload);
   };
+
+  const isLoading = resultsQuery.isLoading || studentsQuery.isLoading;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-8">
       <Button variant="ghost" size="sm" asChild className="mb-4">
-        <Link to="/exams">
+        <Link to={`/exams/${examId}`}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to exams
+          Back to results
         </Link>
       </Button>
 
       <div className="mb-6 flex items-center gap-3">
         <Icon icon={ClipboardList} size="lg" className="text-blue-600" />
         <Heading level={1} className="text-3xl md:text-4xl">
-          New Code Review
+          Edit Code Review
         </Heading>
       </div>
-      <Text color="muted" className="mb-6">
-        Write a single review per group. A group may contain one or more students.
-      </Text>
 
-      {studentsQuery.isLoading ? (
+      {isLoading ? (
         <div className="flex justify-center py-16">
           <LoadingSpinner size="lg" />
+        </div>
+      ) : resultsQuery.isError ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-4">
+          <Text color="muted">Could not load exam.</Text>
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-6">
           <div className="space-y-2 rounded-md border border-gray-200 bg-white p-4">
-            <label className="block text-sm font-medium" htmlFor="title">
-              Title
-            </label>
+            <label className="block text-sm font-medium" htmlFor="title">Title</label>
             <input
               id="title"
               type="text"
@@ -206,21 +216,12 @@ export default function CodeReviewCreatePage() {
           </div>
 
           {rows.map((row, index) => (
-            <div
-              key={index}
-              className="space-y-3 rounded-md border border-gray-200 bg-white p-4"
-            >
+            <div key={row._id ?? index} className="space-y-3 rounded-md border border-gray-200 bg-white p-4">
               <div className="flex items-center justify-between">
                 <Heading level={3} className="text-lg">
                   Group {index + 1}
                 </Heading>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeRow(index)}
-                  disabled={rows.length === 1}
-                >
+                <Button type="button" variant="ghost" size="sm" onClick={() => removeRow(index)} disabled={rows.length === 1}>
                   <Trash2 className="mr-1 h-4 w-4" />
                   Remove
                 </Button>
@@ -249,9 +250,7 @@ export default function CodeReviewCreatePage() {
                   })}
                 </div>
                 {row.studentIds.length > 0 ? (
-                  <Badge variant="secondary" className="mt-2">
-                    {row.studentIds.length} selected
-                  </Badge>
+                  <Badge variant="secondary" className="mt-2">{row.studentIds.length} selected</Badge>
                 ) : null}
               </div>
 
@@ -261,17 +260,13 @@ export default function CodeReviewCreatePage() {
                   rows={5}
                   className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                   value={row.reviewText}
-                  onChange={(e) =>
-                    updateRow(index, { reviewText: e.target.value })
-                  }
+                  onChange={(e) => updateRow(index, { reviewText: e.target.value })}
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium">
-                  Grade (0–100, optional)
-                </label>
+                <label className="block text-sm font-medium">Grade (0–100, optional)</label>
                 <input
                   type="number"
                   min={0}
@@ -284,17 +279,13 @@ export default function CodeReviewCreatePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium">
-                  GitHub URL (optional)
-                </label>
+                <label className="block text-sm font-medium">GitHub URL (optional)</label>
                 <input
                   type="url"
                   placeholder="https://github.com/owner/repo"
                   className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                   value={row.githubUrl}
-                  onChange={(e) =>
-                    updateRow(index, { githubUrl: e.target.value })
-                  }
+                  onChange={(e) => updateRow(index, { githubUrl: e.target.value })}
                 />
               </div>
             </div>
@@ -306,7 +297,7 @@ export default function CodeReviewCreatePage() {
               Add group
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Saving…" : "Create code review"}
+              {mutation.isPending ? "Saving…" : "Save changes"}
             </Button>
           </div>
         </form>

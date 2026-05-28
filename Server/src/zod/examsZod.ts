@@ -44,12 +44,27 @@ export const codeReviewResultRowSchema = z.object({
     studentIds: z.array(z.string().trim().min(1)).min(1),
     reviewText: z.string().trim().min(1),
     githubUrl: z.string().trim().url().optional(),
+    grade: z.number().min(0).max(100).optional(),
 });
 
 export const createCodeReviewExamSchema = z.object({
     title: z.string().trim().min(1),
     description: z.string().trim().optional(),
     results: z.array(codeReviewResultRowSchema).min(1),
+});
+
+export const updateCodeReviewResultRowSchema = z.object({
+    _id: z.string().trim().optional(),
+    studentIds: z.array(z.string().trim().min(1)).min(1),
+    reviewText: z.string().trim().min(1),
+    githubUrl: z.string().trim().url().optional(),
+    grade: z.number().min(0).max(100).optional(),
+});
+
+export const updateCodeReviewExamSchema = z.object({
+    title: z.string().trim().min(1).optional(),
+    description: z.string().trim().optional(),
+    results: z.array(updateCodeReviewResultRowSchema).min(1),
 });
 
 const localExamOptionSchema = z.object({

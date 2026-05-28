@@ -137,6 +137,7 @@ export interface CodeReviewExamResult extends ExamResultBase {
   students: IStudent[];
   reviewText: string;
   githubUrl?: string;
+  grade?: number;
 }
 
 export interface LocalExamAnswer {
@@ -192,12 +193,23 @@ export interface CodeReviewResultRowInput {
   studentIds: string[];
   reviewText: string;
   githubUrl?: string;
+  grade?: number;
 }
 
 export interface CreateCodeReviewExamInput {
   title: string;
   description?: string;
   results: CodeReviewResultRowInput[];
+}
+
+export interface UpdateCodeReviewResultRowInput extends CodeReviewResultRowInput {
+  _id?: string;
+}
+
+export interface UpdateCodeReviewExamInput {
+  title?: string;
+  description?: string;
+  results: UpdateCodeReviewResultRowInput[];
 }
 
 export interface CreateLocalExamInput {

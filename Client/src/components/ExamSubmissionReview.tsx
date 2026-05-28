@@ -222,9 +222,16 @@ function CodeReviewSubmissionReview({ result }: { result: CodeReviewExamResult }
   return (
     <div className="space-y-4">
       <div className="rounded-md border border-gray-200 bg-white p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <Users className="h-4 w-4 text-blue-600" />
-          <Text className="font-semibold">Group</Text>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-blue-600" />
+            <Text className="font-semibold">Group</Text>
+          </div>
+          {result.grade !== undefined ? (
+            <Badge className="bg-blue-600 text-white text-sm px-3 py-1">
+              Grade: {result.grade} / 100
+            </Badge>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           {result.students.map((student) => (

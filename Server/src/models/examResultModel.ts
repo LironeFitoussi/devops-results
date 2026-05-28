@@ -23,6 +23,7 @@ const baseExamResultSchema = new Schema<IExamResultBase>(
         maxScore: { type: Number },
         confirmedBy: { type: Schema.Types.ObjectId, ref: "User" },
         confirmedAt: { type: Date, required: true, default: Date.now },
+        student: { type: Schema.Types.ObjectId, ref: "Student", index: true },
     },
     {
         timestamps: true,
@@ -73,6 +74,7 @@ const codeReviewResultSchema = new Schema<ICodeReviewResultDoc>(
             },
         },
         reviewText: { type: String, required: true, trim: true },
+        grade: { type: Number, min: 0, max: 100 },
         githubUrl: {
             type: String,
             trim: true,

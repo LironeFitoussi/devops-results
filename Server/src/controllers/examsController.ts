@@ -8,7 +8,7 @@ import {
     getUserWithGoogleToken,
     importConfirmedGoogleExam,
 } from "../services/examImportService.js";
-import { createCodeReviewExam } from "../services/codeReviewExamService.js";
+import { createCodeReviewExam, updateCodeReviewExam } from "../services/codeReviewExamService.js";
 import {
     assignStudentsToLocalExam,
     closeLocalExam,
@@ -33,6 +33,7 @@ import {
     resultIdParamSchema,
     submitLocalExamSchema,
     updateLocalExamSchema,
+    updateCodeReviewExamSchema,
 } from "../zod/examsZod.js";
 import { AppError } from "../utils/errorHandler.js";
 
@@ -116,6 +117,14 @@ class ExamsController {
         const payload = createCodeReviewExamSchema.parse(req.body);
         const result = await createCodeReviewExam(payload, user);
         res.status(201).json({ success: true, data: result });
+    }
+
+    async updateCodeReviewExam(req: Request, res: Response) {
+        const { id } = examIdParamSchema.parse(req.params);
+        const payload = updateCodeReviewExamSchema.parse(req.body);
+        const user = await this.getCurrentUser(req);
+        const result = await updateCodeReviewExam(id, payload, user);
+        res.status(200).json({ success: true, data: result });
     }
 
     async createLocalExam(req: Request, res: Response) {
